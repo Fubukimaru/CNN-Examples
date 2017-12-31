@@ -15,13 +15,31 @@ TODO:
 - Create guide for Ubuntu.
 - Create guide for Windows.
 
-```{bash}
+```
 yaourt -S openblas-lapack
 sudo pacman -S opencv
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+Be patient with the following steps, they take a while:
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+```
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet --branch 0.11.0
+cd mxnet
+make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+```
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+```
+make rpkg
+R CMD INSTALL mxnet_current_r.tar.gz
+```
+
+
+
+Test installation:
+```{r}
+library(mxnet)
+a <- mx.nd.ones(c(2,3), ctx = mx.cpu())
+b <- a * 2 + 1
+b
+```
+
