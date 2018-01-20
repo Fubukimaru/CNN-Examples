@@ -4,6 +4,12 @@ CNN Examples
 Repository for learning about Convolutional Neural Networks theory and 
 application using MXNet CNN implementation on R.
 
+Structure
+---------
+
+- install: Reference on how to install the required software for using MXNet.
+- training: Code for training models
+- pretrained: Code for using pretrained models
 
 References
 ----------
