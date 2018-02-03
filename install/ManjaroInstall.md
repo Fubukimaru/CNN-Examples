@@ -6,14 +6,8 @@ started](https://mxnet.incubator.apache.org/get_started/install.html)
 
 This document provides instructions on how to install MXNet for R on CPU
 mode for Manjaro or Archlinux based systems. It can be extrapolated to
-other linux distros, however the commands will vary.
-
-TODO:
-
-  - Create guide for Ubuntu.
-  - Create guide for Windows.
-
-<!-- end list -->
+other linux distros, however the commands will vary. For *Ubuntu* just follow 
+the reference linked at the top.
 
     yaourt -S openblas-lapack
     sudo pacman -S opencv
