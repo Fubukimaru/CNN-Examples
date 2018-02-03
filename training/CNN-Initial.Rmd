@@ -1,7 +1,8 @@
 ---
 title: "CNN Example - Dogs vs Cats"
-output: rmarkdown::github_document
-# output: html_notebook
+output:
+  pdf_document: default
+  html_notebook: default
 ---
 References:
 
@@ -68,25 +69,33 @@ head(test_files)
 Image preprocessing
 -------------------
 
-**TODO: explain image to vector process with drawings** 
+Now we adapt all the images to a fixed size, as CNNs requieres a fixed input size.
+In this case we transform the image to 80x80 size with 3 channels (RGB). If your
+image has the alpha channel (4th channel, used for transparency), you should remove
+it in this case. In fact, alpha channel can also be used, but we discard it for 
+this example.
 
 ```{r}
 ### Load images and and convert to array
 train_prep<- function(start,end, size){
 
   count<- 2*length(start:end)
-  data_array<- array(NA, dim = c(size, size, 3, count))
+  # Initialize array with NA ([Size x Size x 3 channels (RGB)] x number of img) 
+  data_array<- array(NA, dim = c(size, size, 3, count)) 
   
   for (i in start:end) {
-    ### load jpeg into imageR
+    # Load jpeg into imageR
     cat <- load.image(file.path(train_path, cat_files[i]))
+    # Resize image to a 80x80 with 3 channels image
     cat<- resize(cat,size_x = size, size_y = size, size_c = 3, interpolation_type = 2)
+    # Transform the image into a vector/array
     cat_array<-t(round(array(cat),4))
       
     dog <- load.image(file.path(train_path, dog_files[i]))
     dog<- resize(dog,size_x = size, size_y = size, size_c = 3, interpolation_type = 2)
     dog_array<-t(round(array(dog),4))
     
+    # Add images to the result
     data_array[, , , 2*(i-start+1)-1]<- cat_array
     data_array[, , , 2*(i-start+1)]<- dog_array
   }
@@ -125,6 +134,8 @@ plot(img_test)
 
 Model architecture definition
 -----------------------------
+
+Now we have to define the CNN architecture.
 
 ```{r}
 # input
@@ -183,7 +194,7 @@ executor <- mx.simple.bind(symbol=combined, data=dim(train_array), ctx=devices)
 mx.set.seed(123)
 model_mxnet <- mx.model.FeedForward.create(convnet,
                                                X=train_array, 
-                                               y=train_labels,, 
+                                               y=train_labels,
                                                eval.data = list(data=eval_array, label=eval_labels),
                                                array.batch.size = 16, 
                                                ctx=devices, 
