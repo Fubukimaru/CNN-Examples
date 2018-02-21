@@ -65,7 +65,6 @@ head(dog_files)
 head(test_files)
 ```
 
-
 Image preprocessing
 -------------------
 
@@ -198,7 +197,7 @@ model_mxnet <- mx.model.FeedForward.create(convnet,
                                                eval.data = list(data=eval_array, label=eval_labels),
                                                array.batch.size = 16, 
                                                ctx=devices, 
-                                               num.round=5,
+                                               num.round=50,
                                                learning.rate=0.05,
                                                wd=0.001,
                                                momentum=0.9,
