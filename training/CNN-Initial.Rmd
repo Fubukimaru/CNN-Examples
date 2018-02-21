@@ -180,6 +180,39 @@ graph.viz(convnet)
 
 ```
 
+```{r}
+# input
+data <- mx.symbol.Variable('data')
+
+conv1A <- mx.symbol.Convolution(data=data, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
+act1A <- mx.symbol.Activation(data=conv1A, act_type="relu")
+conv1B <- mx.symbol.Convolution(data=act1A, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
+act1B <- mx.symbol.Activation(data=conv1B, act_type="relu")
+pool1<- mx.symbol.Pooling(data=act1B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
+
+conv2A <- mx.symbol.Convolution(data=pool1, kernel=c(3,3), num_filter=64, stride=c(1,1), pad=c(1,1))
+act2A <- mx.symbol.Activation(data=conv2A, act_type="relu")
+conv2B <- mx.symbol.Convolution(data=act2A, kernel=c(3,3), num_filter=64, stride=c(1,1), pad=c(1,1))
+act2B <- mx.symbol.Activation(data=conv2B, act_type="relu")
+pool2<- mx.symbol.Pooling(data=act2B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
+
+# flatten
+flatten <- mx.symbol.Flatten(data=pool2)
+
+fc1 <- mx.symbol.FullyConnected(data=flatten, num_hidden=512)
+act_fc1 <- mx.symbol.Activation(data=fc1, act_type="relu")
+drop1 <- mx.symbol.Dropout(data=act_fc1, p=0.05)
+
+# loss
+fc_final <- mx.symbol.FullyConnected(data=drop1, num_hidden=2)
+convnet <- mx.symbol.SoftmaxOutput(data=fc_final)
+
+### plot the model structure
+graph.viz(convnet)
+
+```
+
+
 Model training
 --------------
 
@@ -197,10 +230,10 @@ model_mxnet <- mx.model.FeedForward.create(convnet,
                                                eval.data = list(data=eval_array, label=eval_labels),
                                                array.batch.size = 16, 
                                                ctx=devices, 
-                                               num.round=50,
+                                               num.round=5,
                                                learning.rate=0.05,
                                                wd=0.001,
-                                               momentum=0.9,
+                                               momentum=0.1,
                                                clip_gradient=1,
                                                eval.metric=mx.metric.accuracy, 
                                                initializer=mx.init.Xavier(rnd_type = "gaussian", factor_type = "avg", magnitude = 3),
