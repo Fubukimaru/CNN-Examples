@@ -1,27 +1,27 @@
----
-title: "CNN Example - Dogs vs Cats"
-output:
-  pdf_document: default
-  html_notebook: default
----
-References:
-
-- [MXNet CNN Starter kit](https://www.kaggle.com/jeremiedb/mxnet-with-r-starter-kit)
-- [Kaggle: Cats vs Dogs dataset](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/data)
-- [Dataset Mirror](https://www.floydhub.com/fastai/datasets/kaggle-dogs-vs-cats-redux-kernels-edition)
-- [R Markdown](http://rmarkdown.rstudio.com)
-
-
-Setup:
-
-```{r}
+#' ---
+#' title: "CNN Example - Dogs vs Cats"
+#' output:
+#'   pdf_document: default
+#'   html_notebook: default
+#' ---
+#' References:
+#' 
+#' - [MXNet CNN Starter kit](https://www.kaggle.com/jeremiedb/mxnet-with-r-starter-kit)
+#' - [Kaggle: Cats vs Dogs dataset](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/data)
+#' - [Dataset Mirror](https://www.floydhub.com/fastai/datasets/kaggle-dogs-vs-cats-redux-kernels-edition)
+#' - [R Markdown](http://rmarkdown.rstudio.com)
+#' 
+#' 
+#' Setup:
+#' 
+## ------------------------------------------------------------------------
 # install.packages(c("imager", "data.table", "dtplyr", "dplyr", "readr", "ggplot2", "plotly"))
-```
 
-
-
-
-```{r}
+#' 
+#' 
+#' 
+#' 
+## ------------------------------------------------------------------------
 library(imager)
 library(data.table)
 library(dtplyr)
@@ -30,14 +30,14 @@ library(readr)
 library(ggplot2)
 library(plotly)
 library(mxnet)
-```
-Input preprocessing
-===================
 
-Before starting we need to process the images, as they are not a standard 
-data.frame. We first are required to build a list of filenames out of the images.
-
-```{r}
+#' Input preprocessing
+#' ===================
+#' 
+#' Before starting we need to process the images, as they are not a standard 
+#' data.frame. We first are required to build a list of filenames out of the images.
+#' 
+## ------------------------------------------------------------------------
 # Load the MNIST digit recognition dataset into R
 # http://yann.lecun.com/exdb/mnist/
 # assume you have all 4 files and gunzip'd them
@@ -78,12 +78,12 @@ load_mnist <- function() {
 show_digit <- function(arr784, col=gray(12:1/12), ...) {
   image(matrix(arr784, nrow=28)[,28:1], col=col, ...)
 }
-```
 
-Image Loading
--------------
-
-```{r}
+#' 
+#' Image Loading
+#' -------------
+#' 
+## ------------------------------------------------------------------------
   load_image_file <- function(filename) {
     ret = list()
     f = file(filename,'rb')
@@ -110,48 +110,48 @@ Image Loading
   
   train$y <- load_label_file('~/data/fashionMNIST/train-labels-idx1-ubyte')
   test$y <- load_label_file('~/data/fashionMNIST/t10k-labels-idx1-ubyte') 
-```
 
-Reshape data for CNN input
---------------------------
-
-As input data we have now a matrix of N rows times M columns. The rows represent
-each image and the columns each pixel of the image. We will reshape it to take
-the shape of a 4 dimensional array. First identifier will be the image, second 
-the channel and third and fourth will be the coordinates of a given pixel of the
-image.
-
-Mind that as we are working with a grayscale image we only have one channel.
-
-```{r}
+#' 
+#' Reshape data for CNN input
+#' --------------------------
+#' 
+#' As input data we have now a matrix of N rows times M columns. The rows represent
+#' each image and the columns each pixel of the image. We will reshape it to take
+#' the shape of a 4 dimensional array. First identifier will be the image, second 
+#' the channel and third and fourth will be the coordinates of a given pixel of the
+#' image.
+#' 
+#' Mind that as we are working with a grayscale image we only have one channel.
+#' 
+## ------------------------------------------------------------------------
 train$x <- array(train$x, c(train$n,1,28,28))
 train$x <- aperm(train$x, c(3,4,2,1))
 test$x <- array(test$x, c(test$n,1,28,28))
 test$x <- aperm(test$x, c(3,4,2,1))
-```
 
-
-
-Check images after preprocess
------------------------------
-```{r}
+#' 
+#' 
+#' 
+#' Check images after preprocess
+#' -----------------------------
+## ------------------------------------------------------------------------
 show_image <- function(imgarray, col=gray(12:1/12), ...) {
   image(matrix(imgarray, nrow=28)[,28:1], col=col, ...)
 }
 
 show_image(train$x[,,,13])
 
-```
 
-Model architecture definition
------------------------------
-
-Now we have to define the CNN architecture.
-
-LeNet
------
-
-```{r}
+#' 
+#' Model architecture definition
+#' -----------------------------
+#' 
+#' Now we have to define the CNN architecture.
+#' 
+#' LeNet
+#' -----
+#' 
+## ------------------------------------------------------------------------
 # Lenet
 
 #input
@@ -174,14 +174,14 @@ tanh3 <- mx.symbol.Activation(data=fc1, act_type="tanh")
 fc2 <- mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
 # loss
 lenet <- mx.symbol.SoftmaxOutput(data=fc2)
-```
 
-
-
-Model training
---------------
-
-```{r}
+#' 
+#' 
+#' 
+#' Model training
+#' --------------
+#' 
+## ------------------------------------------------------------------------
 devices <- mx.cpu()
 
 ### combine symbols and create executor for inspection of learned features
@@ -204,23 +204,23 @@ model_mxnet <- mx.model.FeedForward.create(lenet,
                                                initializer=mx.init.Xavier(rnd_type = "gaussian", factor_type = "avg", magnitude = 3),
                                                epoch.end.callback = mx.callback.log.train.metric(1))
 
-```
-Start training with 1 devices
-[1] Train-accuracy=0.754774624373956
-[1] Validation-accuracy=0.794
-[2] Train-accuracy=0.831833333333333
-[2] Validation-accuracy=0.8396
-[3] Train-accuracy=0.849433333333332
-[3] Validation-accuracy=0.8543
-[4] Train-accuracy=0.85745
-[4] Validation-accuracy=0.8566
-[5] Train-accuracy=0.8469
-[5] Validation-accuracy=0.8194
 
-
-Looking at generated features
------------------------------
-```{r}
+#' Start training with 1 devices
+#' [1] Train-accuracy=0.754774624373956
+#' [1] Validation-accuracy=0.794
+#' [2] Train-accuracy=0.831833333333333
+#' [2] Validation-accuracy=0.8396
+#' [3] Train-accuracy=0.849433333333332
+#' [3] Validation-accuracy=0.8543
+#' [4] Train-accuracy=0.85745
+#' [4] Validation-accuracy=0.8566
+#' [5] Train-accuracy=0.8469
+#' [5] Validation-accuracy=0.8194
+#' 
+#' 
+#' Looking at generated features
+#' -----------------------------
+## ------------------------------------------------------------------------
 mx.exec.update.arg.arrays(exec = executor, arg.arrays = model_mxnet$arg.params, match.name=TRUE)
 mx.exec.update.arg.arrays(executor, list(data=mx.nd.array(train_array)), match.name=TRUE)
 mx.exec.forward(executor, is.train=FALSE)
@@ -231,21 +231,20 @@ for (i in 1:16) {
   img<-as.cimg(img_array)
   plot(img)
 }
-```
 
-Generating predictions
-----------------------
-
-```{r}
+#' 
+#' Generating predictions
+#' ----------------------
+#' 
+## ------------------------------------------------------------------------
 pred_prob<- t(predict(model_mxnet, test$x))
 submit <- data.frame(id=1:64, label=pred_prob[, 2])
 head(submit)
-```
 
-
-Export R code
--------------
-```{r}
-library(knitr)
-purl("CNN-Initial.Rmd", output = "CNN-Initial.R", documentation = 2)
-```
+#' 
+#' 
+#' Export R code
+#' -------------
+#' library(knitr)
+#' purl("CNN-Initial.Rmd", output = "CNN-Initial.R", documentation = 2)
+#' 
