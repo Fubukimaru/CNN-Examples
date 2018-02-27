@@ -148,81 +148,34 @@ Model architecture definition
 
 Now we have to define the CNN architecture.
 
-```{r}
-# input
-data <- mx.symbol.Variable('data')
-
-conv1A <- mx.symbol.Convolution(data=data, kernel=c(3,3), num_filter=32, stride=c(1,1), pad=c(1,1))
-act1A <- mx.symbol.Activation(data=conv1A, act_type="relu")
-conv1B <- mx.symbol.Convolution(data=act1A, kernel=c(3,3), num_filter=32, stride=c(1,1), pad=c(1,1))
-act1B <- mx.symbol.Activation(data=conv1B, act_type="relu")
-pool1<- mx.symbol.Pooling(data=act1B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
-
-conv2A <- mx.symbol.Convolution(data=pool1, kernel=c(3,3), num_filter=64, stride=c(1,1), pad=c(1,1))
-act2A <- mx.symbol.Activation(data=conv2A, act_type="relu")
-conv2B <- mx.symbol.Convolution(data=act2A, kernel=c(3,3), num_filter=64, stride=c(1,1), pad=c(1,1))
-act2B <- mx.symbol.Activation(data=conv2B, act_type="relu")
-pool2<- mx.symbol.Pooling(data=act2B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
-
-conv3A <- mx.symbol.Convolution(data=pool2, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
-act3A <- mx.symbol.Activation(data=conv3A, act_type="relu")
-conv3B <- mx.symbol.Convolution(data=act3A, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
-act3B <- mx.symbol.Activation(data=conv3B, act_type="relu")
-pool3<- mx.symbol.Pooling(data=act3B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
-
-conv4A <- mx.symbol.Convolution(data=pool3, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
-act4A <- mx.symbol.Activation(data=conv4A, act_type="relu")
-conv4B <- mx.symbol.Convolution(data=act4A, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
-act4B <- mx.symbol.Activation(data=conv4B, act_type="relu")
-pool4<- mx.symbol.Pooling(data=act4B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
-
-# flatten
-flatten <- mx.symbol.Flatten(data=pool4)
-
-fc1 <- mx.symbol.FullyConnected(data=flatten, num_hidden=512)
-act_fc1 <- mx.symbol.Activation(data=fc1, act_type="relu")
-drop1 <- mx.symbol.Dropout(data=act_fc1, p=0.5)
-
-# loss
-fc_final <- mx.symbol.FullyConnected(data=drop1, num_hidden=2)
-convnet <- mx.symbol.SoftmaxOutput(data=fc_final)
-
-### plot the model structure
-graph.viz(convnet)
-
-```
+LeNet
+-----
 
 ```{r}
-# input
+# Lenet
+
+#input
 data <- mx.symbol.Variable('data')
-
-conv1A <- mx.symbol.Convolution(data=data, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
-act1A <- mx.symbol.Activation(data=conv1A, act_type="relu")
-conv1B <- mx.symbol.Convolution(data=act1A, kernel=c(3,3), num_filter=128, stride=c(1,1), pad=c(1,1))
-act1B <- mx.symbol.Activation(data=conv1B, act_type="relu")
-pool1<- mx.symbol.Pooling(data=act1B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
-
-conv2A <- mx.symbol.Convolution(data=pool1, kernel=c(3,3), num_filter=64, stride=c(1,1), pad=c(1,1))
-act2A <- mx.symbol.Activation(data=conv2A, act_type="relu")
-conv2B <- mx.symbol.Convolution(data=act2A, kernel=c(3,3), num_filter=64, stride=c(1,1), pad=c(1,1))
-act2B <- mx.symbol.Activation(data=conv2B, act_type="relu")
-pool2<- mx.symbol.Pooling(data=act2B, pool_type="max", kernel=c(2,2), stride=c(2,2), pad=c(0,0))
-
-# flatten
+# first conv
+conv1 <- mx.symbol.Convolution(data=data, kernel=c(5,5), num_filter=20)
+tanh1 <- mx.symbol.Activation(data=conv1, act_type="tanh")
+pool1 <- mx.symbol.Pooling(data=tanh1, pool_type="max",
+                           kernel=c(2,2), stride=c(2,2))
+# second conv
+conv2 <- mx.symbol.Convolution(data=pool1, kernel=c(5,5), num_filter=50)
+tanh2 <- mx.symbol.Activation(data=conv2, act_type="tanh")
+pool2 <- mx.symbol.Pooling(data=tanh2, pool_type="max",
+                           kernel=c(2,2), stride=c(2,2))
+# first fullc
 flatten <- mx.symbol.Flatten(data=pool2)
-
-fc1 <- mx.symbol.FullyConnected(data=flatten, num_hidden=512)
-act_fc1 <- mx.symbol.Activation(data=fc1, act_type="relu")
-drop1 <- mx.symbol.Dropout(data=act_fc1, p=0.05)
-
+fc1 <- mx.symbol.FullyConnected(data=flatten, num_hidden=500)
+tanh3 <- mx.symbol.Activation(data=fc1, act_type="tanh")
+# second fullc
+fc2 <- mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
 # loss
-fc_final <- mx.symbol.FullyConnected(data=drop1, num_hidden=2)
-convnet <- mx.symbol.SoftmaxOutput(data=fc_final)
-
-### plot the model structure
-graph.viz(convnet)
-
+lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 ```
+
 
 
 Model training
@@ -232,15 +185,15 @@ Model training
 devices <- mx.cpu()
 
 ### combine symbols and create executor for inspection of learned features
-combined<- mx.symbol.Group(act1A, convnet)
+combined<- mx.symbol.Group(tanh1, lenet)
 executor <- mx.simple.bind(symbol=combined, data=dim(train$x), ctx=devices)
 
 mx.set.seed(123)
-model_mxnet <- mx.model.FeedForward.create(convnet,
+model_mxnet <- mx.model.FeedForward.create(lenet,
                                                X=train$x, 
                                                y=train$y,
-                                               eval.data = list(data=eval_array, label=eval_labels),
-                                               array.batch.size = 16, 
+                                               eval.data = list(data=test$x, label=test$y),
+                                               array.batch.size = 100, 
                                                ctx=devices, 
                                                num.round=5,
                                                learning.rate=0.05,
@@ -252,6 +205,17 @@ model_mxnet <- mx.model.FeedForward.create(convnet,
                                                epoch.end.callback = mx.callback.log.train.metric(1))
 
 ```
+Start training with 1 devices
+[1] Train-accuracy=0.754774624373956
+[1] Validation-accuracy=0.794
+[2] Train-accuracy=0.831833333333333
+[2] Validation-accuracy=0.8396
+[3] Train-accuracy=0.849433333333332
+[3] Validation-accuracy=0.8543
+[4] Train-accuracy=0.85745
+[4] Validation-accuracy=0.8566
+[5] Train-accuracy=0.8469
+[5] Validation-accuracy=0.8194
 
 
 Looking at generated features
@@ -273,7 +237,7 @@ Generating predictions
 ----------------------
 
 ```{r}
-pred_prob<- t(predict(model_mxnet, eval_array))
+pred_prob<- t(predict(model_mxnet, test$x))
 submit <- data.frame(id=1:64, label=pred_prob[, 2])
 head(submit)
 ```
