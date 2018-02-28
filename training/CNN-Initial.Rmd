@@ -182,7 +182,7 @@ Model training
 --------------
 
 ```{r}
-devices <- mx.cpu()
+devices <- mx.gpu()
 
 ### combine symbols and create executor for inspection of learned features
 combined<- mx.symbol.Group(tanh1, lenet)

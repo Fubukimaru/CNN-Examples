@@ -31,6 +31,10 @@ library(ggplot2)
 library(plotly)
 library(mxnet)
 
+#' Set autotune to 0. Avoid out of memory error for GPUs
+Sys.setenv("MXNET_CUDNN_AUTOTUNE_DEFAULT" = 0)
+
+
 #' Input preprocessing
 #' ===================
 #' 
@@ -182,7 +186,7 @@ lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 #' --------------
 #' 
 ## ------------------------------------------------------------------------
-devices <- mx.cpu()
+devices <- mx.gpu()
 
 ### combine symbols and create executor for inspection of learned features
 combined<- mx.symbol.Group(tanh1, lenet)
@@ -193,7 +197,7 @@ model_mxnet <- mx.model.FeedForward.create(lenet,
                                                X=train$x, 
                                                y=train$y,
                                                eval.data = list(data=test$x, label=test$y),
-                                               array.batch.size = 100, 
+                                               array.batch.size = 10, 
                                                ctx=devices, 
                                                num.round=5,
                                                learning.rate=0.05,
