@@ -1,11 +1,15 @@
 # From this tutorial: https://mxnet.incubator.apache.org/tutorials/r/classifyRealImageWithPretrainedModel.html
 
+# Batch Normalization: https://towardsdatascience.com/batch-normalization-in-neural-networks-1ac91516821c
+
 require(mxnet)
 require(imager)
 
 
 model = mx.model.load("Inception/Inception_BN", iteration=39)
 mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
+plot(as.cimg(mean.img))
+plot(mean.img)
 
 # Take an image from imageR package
 im <- load.image(system.file("extdata/parrots.png", package="imager"))
@@ -32,19 +36,30 @@ preproc.image <- function(im, mean.image, dims=3) {
   return(normed)
 }
 
+# Result printing
+printClassRank <- function(prob, labels, nRes = 10) {
+  nRes <- min(nRes, length(labels))
+  o <- order(prob, decreasing=TRUE)
+  res <- data.frame(class=synsets[o], probability=prob[o])
+  head(res, n = nRes)
+}
+
+# Now we get the class names
+synsets <- readLines("Inception/synset.txt")
+
+
 # Normalize the parrots
 normed <- preproc.image(im, mean.img)
+plot(as.cimg(normed[,,,1]))
 
 # Predict the parrots! In other words, get the class probabilities
 prob <- predict(model, X=normed)
 dim(prob)
 
-# Which class is the most representative
-max.idx <- max.col(t(prob))
-max.idx
+# Which classes ar the most representative
+printClassRank(prob, synsets)
 
-# Now we get the class names
-synsets <- readLines("Inception/synset.txt")
+
 
 
 # Get the class name
@@ -68,11 +83,7 @@ prob <- predict(model, X=normed)
 dim(prob)
 
 # Which class is the most representative
-max.idx <- max.col(t(prob))
-max.idx
-
-# Get the class name
-print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
+printClassRank(prob, synsets)
 
 
 
@@ -87,11 +98,7 @@ prob <- predict(model, X=normed)
 dim(prob)
 
 # Which class is the most representative
-max.idx <- max.col(t(prob))
-max.idx
-
-# Get the class name
-print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
+printClassRank(prob, synsets)
 # African Chamaleon. Almost!
 
 
@@ -106,11 +113,7 @@ prob <- predict(model, X=normed)
 dim(prob)
 
 # Which class is the most representative
-max.idx <- max.col(t(prob))
-max.idx
-
-# Get the class name
-print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
+printClassRank(prob, synsets)
 # Mitten... Almost.
 
 
@@ -122,21 +125,17 @@ plot(im5)
 # Normalize the laptop
 normed <- preproc.image(im5, mean.img)
 prob <- predict(model, X=normed)
-dim(prob)
 
 # Which class is the most representative
-max.idx <- max.col(t(prob))
-max.idx
-
-# Get the class name
-print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
+printClassRank(prob, synsets)
 # Waterbottle. Closer.
 
 
-### Agbar
+### NES
 # Load new image
 im6 <- load.image("images/NES.png")
 dim(im6)
+# Notice that this image has 4 channels!
 plot(im6)
 
 # Remove Alpha Channel
@@ -145,13 +144,48 @@ im6 <- rm.alpha(im6)
 # Normalize the laptop
 normed <- preproc.image(im6, mean.img)
 prob <- predict(model, X=normed)
-dim(prob)
 
 # Which class is the most representative
-max.idx <- max.col(t(prob))
-max.idx
+printClassRank(prob, synsets)
 
 # Get the class name
 print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
 # Modem, close enough.
 
+
+### NES
+# Load new image
+im6 <- load.image("/tmp/donald-trump.jpg")
+dim(im6)
+# Notice that this image has 4 channels!
+plot(im6)
+
+# Normalize the laptop
+normed <- preproc.image(im6, mean.img)
+prob <- predict(model, X=normed)
+
+# Which class is the most representative
+printClassRank(prob, synsets)
+
+# Get the class name
+print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
+# Modem, close enough.
+
+
+### NES
+# Load new image
+im6 <- load.image("/tmp/tito.jpg")
+dim(im6)
+# Notice that this image has 4 channels!
+plot(im6)
+
+# Normalize the laptop
+normed <- preproc.image(im6, mean.img)
+prob <- predict(model, X=normed)
+
+# Which class is the most representative
+printClassRank(prob, synsets)
+
+# Get the class name
+print(paste0("Predicted Top-class: ", synsets  [[max.idx]]))
+# Modem, close enough.
