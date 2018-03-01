@@ -5,11 +5,15 @@
 require(mxnet)
 require(imager)
 
-
+# Loading Batch-Normalized Inception network
+# Reference: Ioffe, Sergey, and Christian Szegedy. 
+#  “Batch normalization: Accelerating deep network training by reducing internal 
+#   covariate shift.” arXiv preprint arXiv:1502.03167 (2015).
 model = mx.model.load("Inception/Inception_BN", iteration=39)
+
+# Load average image (of all the imaged used for training)
 mean.img = as.array(mx.nd.load("Inception/mean_224.nd")[["mean_img"]])
 plot(as.cimg(mean.img))
-plot(mean.img)
 
 # Take an image from imageR package
 im <- load.image(system.file("extdata/parrots.png", package="imager"))
