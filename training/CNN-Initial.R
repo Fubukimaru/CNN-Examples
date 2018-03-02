@@ -1,16 +1,9 @@
 #' ---
-#' title: "CNN Example - Dogs vs Cats"
+#' title: "CNN Example - Fashion MNIST"
 #' output:
 #'   pdf_document: default
 #'   html_notebook: default
 #' ---
-#' References:
-#' 
-#' - [MXNet CNN Starter kit](https://www.kaggle.com/jeremiedb/mxnet-with-r-starter-kit)
-#' - [Kaggle: Cats vs Dogs dataset](https://www.kaggle.com/c/dogs-vs-cats-redux-kernels-edition/data)
-#' - [Dataset Mirror](https://www.floydhub.com/fastai/datasets/kaggle-dogs-vs-cats-redux-kernels-edition)
-#' - [R Markdown](http://rmarkdown.rstudio.com)
-#' 
 #' 
 #' Setup:
 #' 
@@ -22,18 +15,14 @@
 #' 
 #' 
 ## ------------------------------------------------------------------------
-library(imager)
-library(data.table)
-library(dtplyr)
-library(dplyr)
-library(readr)
-library(ggplot2)
-library(plotly)
+#library(imager)
+#library(data.table)
+#library(dtplyr)
+#library(dplyr)
+#library(readr)
+#library(ggplot2)
+#library(plotly)
 library(mxnet)
-
-#' Set autotune to 0. Avoid out of memory error for GPUs
-Sys.setenv("MXNET_CUDNN_AUTOTUNE_DEFAULT" = 0)
-
 
 #' Input preprocessing
 #' ===================
@@ -41,51 +30,6 @@ Sys.setenv("MXNET_CUDNN_AUTOTUNE_DEFAULT" = 0)
 #' Before starting we need to process the images, as they are not a standard 
 #' data.frame. We first are required to build a list of filenames out of the images.
 #' 
-## ------------------------------------------------------------------------
-# Load the MNIST digit recognition dataset into R
-# http://yann.lecun.com/exdb/mnist/
-# assume you have all 4 files and gunzip'd them
-# creates train$n, train$x, train$y  and test$n, test$x, test$y
-# e.g. train$x is a 60000 x 784 matrix, each row is one digit (28x28)
-# call:  show_digit(train$x[5,])   to see a digit.
-# brendan o'connor - gist.github.com/39760 - anyall.org
-
-load_mnist <- function() {
-  load_image_file <- function(filename) {
-    ret = list()
-    f = file(filename,'rb')
-    readBin(f,'integer',n=1,size=4,endian='big')
-    ret$n = readBin(f,'integer',n=1,size=4,endian='big')
-    nrow = readBin(f,'integer',n=1,size=4,endian='big')
-    ncol = readBin(f,'integer',n=1,size=4,endian='big')
-    x = readBin(f,'integer',n=ret$n*nrow*ncol,size=1,signed=F)
-    ret$x = matrix(x, ncol=nrow*ncol, byrow=T)
-    close(f)
-    ret
-  }
-  load_label_file <- function(filename) {
-    f = file(filename,'rb')
-    readBin(f,'integer',n=1,size=4,endian='big')
-    n = readBin(f,'integer',n=1,size=4,endian='big')
-    y = readBin(f,'integer',n=n,size=1,signed=F)
-    close(f)
-    y
-  }
-  train <<- load_image_file('mnist/train-images-idx3-ubyte')
-  test <<- load_image_file('mnist/t10k-images-idx3-ubyte')
-  
-  train$y <<- load_label_file('mnist/train-labels-idx1-ubyte')
-  test$y <<- load_label_file('mnist/t10k-labels-idx1-ubyte')  
-}
-
-
-show_digit <- function(arr784, col=gray(12:1/12), ...) {
-  image(matrix(arr784, nrow=28)[,28:1], col=col, ...)
-}
-
-#' 
-#' Image Loading
-#' -------------
 #' 
 ## ------------------------------------------------------------------------
   load_image_file <- function(filename) {
@@ -128,8 +72,8 @@ show_digit <- function(arr784, col=gray(12:1/12), ...) {
 #' Mind that as we are working with a grayscale image we only have one channel.
 #' 
 ## ------------------------------------------------------------------------
-train$x <- array(train$x, c(train$n,1,28,28))
-train$x <- aperm(train$x, c(3,4,2,1))
+train$x <- array(train$x, c(train$n,1,28,28)) # Transform into Nx1x28x28 array
+train$x <- aperm(train$x, c(3,4,2,1))         # Permutate into 28x28x1xN array
 test$x <- array(test$x, c(test$n,1,28,28))
 test$x <- aperm(test$x, c(3,4,2,1))
 
@@ -144,13 +88,21 @@ show_image <- function(imgarray, col=gray(12:1/12), ...) {
 }
 
 show_image(train$x[,,,13])
+show_image(train$x[,,,54])
 
 
 #' 
 #' Model architecture definition
 #' -----------------------------
 #' 
-#' Now we have to define the CNN architecture.
+#' Now we have to define the CNN architecture. In this case we use LeNet, proposed
+#' by LeCun et al. (Gradient-based learning applied to document recognition. 
+#' Proceedings of the IEEE, november 1998). 
+#' 
+#' It is composed by two packs of convolutional-activation(tanh)-pooling layers and
+#' two fully connected layers with a softmax at the end.
+#' 
+#' In mxnet we define symbols and the connections between those symbols.
 #' 
 #' LeNet
 #' -----
@@ -160,8 +112,9 @@ show_image(train$x[,,,13])
 
 #input
 data <- mx.symbol.Variable('data')
+low <- mx.symbol.cast(data=data, dtype='float16')
 # first conv
-conv1 <- mx.symbol.Convolution(data=data, kernel=c(5,5), num_filter=20)
+conv1 <- mx.symbol.Convolution(data=low, kernel=c(5,5), num_filter=20)
 tanh1 <- mx.symbol.Activation(data=conv1, act_type="tanh")
 pool1 <- mx.symbol.Pooling(data=tanh1, pool_type="max",
                            kernel=c(2,2), stride=c(2,2))
@@ -176,21 +129,27 @@ fc1 <- mx.symbol.FullyConnected(data=flatten, num_hidden=500)
 tanh3 <- mx.symbol.Activation(data=fc1, act_type="tanh")
 # second fullc
 fc2 <- mx.symbol.FullyConnected(data=tanh3, num_hidden=10)
+
 # loss
 lenet <- mx.symbol.SoftmaxOutput(data=fc2)
 
 #' 
+#' 
+#' And now we an visualize the model representation with the following commands:
+## ------------------------------------------------------------------------
+graph.viz(lenet)
+
 #' 
 #' 
 #' Model training
 #' --------------
 #' 
 ## ------------------------------------------------------------------------
-devices <- mx.gpu()
+devices <- mx.cpu()
 
 ### combine symbols and create executor for inspection of learned features
-combined<- mx.symbol.Group(tanh1, lenet)
-executor <- mx.simple.bind(symbol=combined, data=dim(train$x), ctx=devices)
+combined<- mx.symbol.Group(tanh2, lenet)
+#executor <- mx.simple.bind(symbol=combined, data=dim(train$x), ctx=devices)
 
 mx.set.seed(123)
 model_mxnet <- mx.model.FeedForward.create(lenet,
@@ -249,6 +208,7 @@ head(submit)
 #' 
 #' Export R code
 #' -------------
-#' library(knitr)
-#' purl("CNN-Initial.Rmd", output = "CNN-Initial.R", documentation = 2)
-#' 
+## ------------------------------------------------------------------------
+library(knitr)
+purl("CNN-Initial.Rmd", output = "CNN-Initial.R", documentation = 2)
+
