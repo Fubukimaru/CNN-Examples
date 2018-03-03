@@ -1,8 +1,30 @@
-# From this tutorial: https://mxnet.incubator.apache.org/tutorials/r/classifyRealImageWithPretrainedModel.html
-# Batch Normalization: https://towardsdatascience.com/batch-normalization-in-neural-networks-1ac91516821c
+# Installation
+# ============
+# 
+# MXNet is a package that is quite new in the R world, therefore is not included
+# in CRAN repository. In order to install this package you can follow the instructions
+# found in https://mxnet.incubator.apache.org/install/index.html. Windows/MacOS is
+# recommended for starting to use this package as installation is very simple. 
+# The GPU version is not available out of the box on MacOS and may require to follow
+# Linux installation procedure.
+# 
+# Mind that if you want to use your GPU (Nvida CUDA compatible is needed), you
+# need to install the GPU version of the package along with CUDA, Nvidia's package
+# for interfacing between the user and the GPU, and cuDNN, a Deep Neural Network
+# base package.
+# 
+# - CUDA: http://www.nvidia.es/object/cuda-parallel-computing-es.html
+# - cuDNN: https://developer.nvidia.com/cudnn
+# 
+# Notice that training NN with CPU is slower than using GPU, even though MXNet does
+# some kind of paralelization of the operations using BLAS libraries (Basic Linear
+# Algebra Subprograms). Therefore, GPU usage is advised for this session. But don't
+# worry, the code for CPU and GPU is exactly the same except for one line where
+# we define the execution.
 
-require(mxnet)
-require(imager)
+
+library(mxnet)
+library(imager)
 
 # Loading Batch-Normalized Inception network
 # Reference: Ioffe, Sergey, and Christian Szegedy. 
@@ -166,6 +188,3 @@ prob <- predict(model, X=preproc)
 
 printClassRank(prob, synsets)
 # Modem, Tape player... It is recognizing the aesthetics of that time.
-
-
-
