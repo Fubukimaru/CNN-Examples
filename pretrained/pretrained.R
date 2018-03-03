@@ -66,7 +66,7 @@ dim(im)
 # Preprocess the parrots
 preproc <- preproc.image(im, mean.img)
 plot(as.cimg(preproc[,,,1]))
-
+dim(preproc)
 # We can observe that the image has been reduced, now has height = width and
 #  the color is a little off because of the subtraction of the mean image.
 
