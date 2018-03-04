@@ -1,27 +1,14 @@
 #' ---
 #' title: "CNN Example - Fashion MNIST"
 #' output:
-#'   pdf_document: default
 #'   html_notebook: default
+#'   pdf_document: default
 #' ---
 #' 
-#' Setup:
-#' 
-## ------------------------------------------------------------------------
-# install.packages(c("imager", "data.table", "dtplyr", "dplyr", "readr", "ggplot2", "plotly"))
-
-#' 
 #' 
 #' 
 #' 
 ## ------------------------------------------------------------------------
-#library(imager)
-#library(data.table)
-#library(dtplyr)
-#library(dplyr)
-#library(readr)
-#library(ggplot2)
-#library(plotly)
 library(mxnet)
 
 #' Input preprocessing
@@ -29,6 +16,16 @@ library(mxnet)
 #' 
 #' Before starting we need to process the images, as they are not a standard 
 #' data.frame. We first are required to build a list of filenames out of the images.
+#' The files are composed as binaries with a custom format in order to save space.
+#' 
+#' First we decompress the files (gz)
+## ------------------------------------------------------------------------
+  
+  unzip('fashionMNIST/train-images-idx3-ubyte.zip', exdir = "fashionMNIST")
+  unzip('fashionMNIST/t10k-images-idx3-ubyte.zip', exdir = "fashionMNIST")
+  unzip('fashionMNIST/train-labels-idx1-ubyte.zip', exdir = "fashionMNIST")
+  unzip('fashionMNIST/t10k-labels-idx1-ubyte.zip', exdir = "fashionMNIST")
+
 #' 
 #' 
 ## ------------------------------------------------------------------------
@@ -53,11 +50,41 @@ library(mxnet)
     close(f)
     y
   }
-  train <- load_image_file('~/data/fashionMNIST/train-images-idx3-ubyte')
-  test <- load_image_file('~/data/fashionMNIST/t10k-images-idx3-ubyte')
   
-  train$y <- load_label_file('~/data/fashionMNIST/train-labels-idx1-ubyte')
-  test$y <- load_label_file('~/data/fashionMNIST/t10k-labels-idx1-ubyte') 
+  train <- load_image_file('fashionMNIST/train-images-idx3-ubyte')
+  test <- load_image_file('fashionMNIST/t10k-images-idx3-ubyte')
+  
+  train$y <- load_label_file('fashionMNIST/train-labels-idx1-ubyte')
+  test$y <- load_label_file('fashionMNIST/t10k-labels-idx1-ubyte') 
+  
+  
+  classString <- c("T-shirt/top","Trouser", "Pullover", "Dress", "Coat", "Sandal",
+                  "Shirt","Sneaker", "Bag","Ankle boot")
+  
+  train$yFactor <- as.factor(classString[train$y+1])
+  test$yFactor <- as.factor(classString[test$y+1])
+
+#' 
+#' 
+#' Testing with nnet
+#' -----------------
+#' 
+## ------------------------------------------------------------------------
+library(nnet)
+
+model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=20, maxit=1, decay=0.5, MaxNWts = 15910)
+
+save(model.nnet, file="nnet.mod")
+
+#' 
+## ------------------------------------------------------------------------
+load("nnet.mod")
+p1 <- as.factor(predict (model.nnet, type="class"))
+
+# +1 because indexing in R starts at 1, not at 0!
+(t1 <- table(Truth=train$yFactor, Pred=p1))
+(1-sum(diag(t1))/sum(t1))*100
+
 
 #' 
 #' Reshape data for CNN input
@@ -67,17 +94,26 @@ library(mxnet)
 #' each image and the columns each pixel of the image. We will reshape it to take
 #' the shape of a 4 dimensional array. First identifier will be the image, second 
 #' the channel and third and fourth will be the coordinates of a given pixel of the
-#' image.
-#' 
-#' Mind that as we are working with a grayscale image we only have one channel.
+#' image, i.e. Width x Height x Channels x Images.
 #' 
 ## ------------------------------------------------------------------------
 train$x <- array(train$x, c(train$n,1,28,28)) # Transform into Nx1x28x28 array
-train$x <- aperm(train$x, c(3,4,2,1))         # Permutate into 28x28x1xN array
+train$x <- aperm(train$x, c(3,4,2,1))         # Permutate columns into 28x28x1xN array
 test$x <- array(test$x, c(test$n,1,28,28))
 test$x <- aperm(test$x, c(3,4,2,1))
 
 #' 
+#' Now we divide between training set and validation set. Mind that as we are working 
+#' with a grayscale image we only have one channel. This is dangerous in R as if we
+#' subset the dataset using [] operator, R will remove the dimension that only has one identifier (channels). To prevent this we have to do as follows: x[i, j, drop = FALSE] instead of x[i,j].
+#' 
+## ------------------------------------------------------------------------
+valSamp <- sample(length(train$y)/3)
+
+validation <- list(x = train$x[,,,valSamp, drop=FALSE], y= train$y[valSamp]) # drop=FALSE forbids R to drop dimensions with length 1
+train$x <- train$x[,,,-valSamp, drop=FALSE]
+train$y <- train$y[-valSamp]
+
 #' 
 #' 
 #' Check images after preprocess
@@ -95,14 +131,19 @@ show_image(train$x[,,,54])
 #' Model architecture definition
 #' -----------------------------
 #' 
-#' Now we have to define the CNN architecture. In this case we use LeNet, proposed
+#' Now we have to define the CNN arcir <- rbind(iris3[,,1],iris3[,,2],iris3[,,3])
+#' targets <- class.ind( c(rep("s", 50), rep("c", 50), rep("v", 50)) )
+#' samp <- c(sample(1:50,25), sample(51:100,25), sample(101:150,25))
+#' ir1 <- nnet(ir[samp,], targets[samp,], size = 2, rang = 0.1,
+#' decay = 5e-4, maxit = 200)hitecture. In this case we use LeNet, proposed
 #' by LeCun et al. (Gradient-based learning applied to document recognition. 
 #' Proceedings of the IEEE, november 1998). 
 #' 
 #' It is composed by two packs of convolutional-activation(tanh)-pooling layers and
 #' two fully connected layers with a softmax at the end.
 #' 
-#' In mxnet we define symbols and the connections between those symbols.
+#' In MXNet, as in most of the packages, we define layers as symbols and the 
+#' connections between those symbols using the data parameter.
 #' 
 #' LeNet
 #' -----
@@ -112,9 +153,9 @@ show_image(train$x[,,,54])
 
 #input
 data <- mx.symbol.Variable('data')
-low <- mx.symbol.cast(data=data, dtype='float16')
+
 # first conv
-conv1 <- mx.symbol.Convolution(data=low, kernel=c(5,5), num_filter=20)
+conv1 <- mx.symbol.Convolution(data=data, kernel=c(5,5), num_filter=20)
 tanh1 <- mx.symbol.Activation(data=conv1, act_type="tanh")
 pool1 <- mx.symbol.Pooling(data=tanh1, pool_type="max",
                            kernel=c(2,2), stride=c(2,2))
@@ -144,21 +185,22 @@ graph.viz(lenet)
 #' Model training
 #' --------------
 #' 
+#' Now we're going to train the network using CPU. Mind that if you want to use
+#' GPUs you need to have the GPU version of the package and the required Nvidia
+#' packages.
+#' 
 ## ------------------------------------------------------------------------
 devices <- mx.cpu()
-
-### combine symbols and create executor for inspection of learned features
-combined<- mx.symbol.Group(tanh2, lenet)
-#executor <- mx.simple.bind(symbol=combined, data=dim(train$x), ctx=devices)
+# devices <- mx.gpu() # Use GPU
 
 mx.set.seed(123)
 model_mxnet <- mx.model.FeedForward.create(lenet,
                                                X=train$x, 
                                                y=train$y,
-                                               eval.data = list(data=test$x, label=test$y),
-                                               array.batch.size = 100, 
+                                               eval.data = list(data=validation$x, label=validation$y),
+                                               array.batch.size = 500, 
                                                ctx=devices, 
-                                               num.round=5,
+                                               num.round=50,
                                                learning.rate=0.05,
                                                wd=0.001,
                                                momentum=0.1,
@@ -181,30 +223,33 @@ model_mxnet <- mx.model.FeedForward.create(lenet,
 #' [5] Validation-accuracy=0.8194
 #' 
 #' 
-#' Looking at generated features
-#' -----------------------------
-## ------------------------------------------------------------------------
-mx.exec.update.arg.arrays(exec = executor, arg.arrays = model_mxnet$arg.params, match.name=TRUE)
-mx.exec.update.arg.arrays(executor, list(data=mx.nd.array(train_array)), match.name=TRUE)
-mx.exec.forward(executor, is.train=FALSE)
-
-par(mfrow=c(4,4), mar=c(0.1,0.1,0.1,0.1))
-for (i in 1:16) {
-  img_array <- as.array(executor$outputs$activation0_output)[,,i,1]
-  img<-as.cimg(img_array)
-  plot(img)
-}
-
-#' 
 #' Generating predictions
 #' ----------------------
 #' 
+#' Predicting the label for the test set
 ## ------------------------------------------------------------------------
 pred_prob<- t(predict(model_mxnet, test$x))
-submit <- data.frame(id=1:64, label=pred_prob[, 2])
-head(submit)
+
+
 
 #' 
+#' 
+## ------------------------------------------------------------------------
+predClass <- factor(apply(pred_prob,1,which.max))
+levels(predClass) <- classString
+
+trueClass <- factor(test$y)
+levels(trueClass) <- classString
+
+
+#' 
+## ------------------------------------------------------------------------
+  (cMatrix <- table(trueClass,predClass))
+  
+  truePositive <- sum(diag(cMatrix))
+  total <- sum(cMatrix)
+  accuracy <- truePositive/total
+
 #' 
 #' Export R code
 #' -------------
@@ -212,3 +257,6 @@ head(submit)
 library(knitr)
 purl("CNN-Initial.Rmd", output = "CNN-Initial.R", documentation = 2)
 
+#' 
+#' 
+#' 
