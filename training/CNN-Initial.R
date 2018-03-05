@@ -55,7 +55,7 @@ library(mxnet)
 # Testing with nnet
 # -----------------
 library(nnet)
-
+library(caret)
 # model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=50, maxit=300, decay=0.5, MaxNWts = 39760)
 
 ## specify 10x10 CV
