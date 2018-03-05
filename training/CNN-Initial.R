@@ -182,6 +182,8 @@ model_mxnet <- mx.model.FeedForward.create(lenet,
                 epoch.end.callback = mx.callback.log.train.metric(1))
 
 
+save(model_mxnet, file="mxnet.mod")
+load("mxnet.mod")
 # Start training with 1 devices
 # [1] Train-accuracy=0.679799498746868
 # [1] Validation-accuracy=0.7516
