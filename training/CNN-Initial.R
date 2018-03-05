@@ -56,9 +56,24 @@ library(mxnet)
 # -----------------
 library(nnet)
 
-model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=50, maxit=300, decay=0.5, MaxNWts = 39760)
+# model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=50, maxit=300, decay=0.5, MaxNWts = 39760)
 
-save(model.nnet, file="nnet.mod")
+## specify 10x10 CV
+trc <- trainControl (method="repeatedcv", number=2, repeats=1)
+
+(decays <- 10^seq(-3,0,by=0.25))
+
+library(doMC)
+library(parallel)
+# Use all cores except one (recommended if you want to use your computer for something else)
+registerDoMC(cores = detectCores()-1)
+
+## WARNING: this takes some time (around 10')
+model.2x1CV <- train (x=train$x, y=class.ind(train$yFactor), method='nnet', softmax=TRUE, maxit = 500, trace = FALSE,
+                      tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
+
+
+save(model.2x1CV, file="nnet.mod")
 
 ## ------------------------------------------------------------------------
 load("nnet.mod")
