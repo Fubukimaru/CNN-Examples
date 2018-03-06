@@ -51,7 +51,6 @@ library(mxnet)
   train$yFactor <- as.factor(classString[train$y+1])
   test$yFactor <- as.factor(classString[test$y+1])
 
-
 # Testing with nnet
 # -----------------
 library(nnet)
@@ -64,17 +63,21 @@ trc <- trainControl (method="repeatedcv", number=2, repeats=1)
 (decays <- 10^seq(-3,0,by=0.25))
 
 library(doMC)
-library(parallel)
 # Use all cores except one (recommended if you want to use your computer for something else)
-registerDoMC(cores = detectCores()-1)
 
-## WARNING: this takes some time (around 10')
-model.2x1CV <- train (x=train$x, y=class.ind(train$yFactor), method='nnet', softmax=TRUE, maxit = 500, trace = FALSE,
+cores <- min(detectCores()-1, ceiling(length(decays)/2))
+registerDoMC(cores = cores) 
+# Build a data.frame for the process
+nnetData <- data.frame(train$x, class=train$yFactor)
+
+print("Executing training")
+## Warning: This takes a while...
+model.2x1CV <- train (class ~ ., data=nnetData, method='nnet', maxit = 300, trace = FALSE,
                       tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
 
 
 save(model.2x1CV, file="nnet.mod")
-
+rm(nnetData) # Not needed anymore...
 ## ------------------------------------------------------------------------
 load("nnet.mod")
 p1 <- as.factor(predict (model.nnet, type="class"))
