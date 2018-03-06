@@ -194,7 +194,7 @@ model_mxnet <- mx.model.FeedForward.create(lenet,
                 num.round=5,
                 learning.rate=0.05, # Stochastic Gradient Descent learning rate
                 wd=0.001, # Weight decay
-                momentum=0.8,
+                momentum=0.8, # Accelerator
                 clip_gradient=1, # Gradient clip. Keep gradient between -1 and 1
                 eval.metric=mx.metric.accuracy, 
                 epoch.end.callback = mx.callback.log.train.metric(1))

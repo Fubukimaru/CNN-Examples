@@ -26,6 +26,8 @@
 library(mxnet)
 library(imager)
 
+
+#TODO: Add Inceptionv3
 # Loading Batch-Normalized Inception network
 # Reference: Ioffe, Sergey, and Christian Szegedy. 
 #  “Batch normalization: Accelerating deep network training by reducing internal 
@@ -144,6 +146,8 @@ prob <- predict(model, X=preproc)
 printClassRank(prob, synsets)
 # African Chamaleon. Almost!
 
+# TODO: ¿Qué pasa si no quito la cabeza?
+
 
 ### Agbar
 # Load new image
@@ -158,6 +162,7 @@ prob <- predict(model, X=preproc)
 # Which class is the most representative
 printClassRank(prob, synsets)
 # Mitten... Almost. The network is not quite sure about what Agbar tower is.
+# Ignore classification, as the higher probability is very small.
 
 # Let's try with another photo
 im5 <- load.image("images/Agbar2.png")
