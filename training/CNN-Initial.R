@@ -58,15 +58,24 @@ train$yFactor <- as.factor(classString[train$y+1])
 test$yFactor <- as.factor(classString[test$y+1])
 
 
-# TODO: CHECK THIS PART!!!
-# Check images after preprocess
-# -----------------------------
+# Now we can check the images check images 
 show_image <- function(imgarray, col=gray(12:1/12), ...) {
   image(matrix(imgarray, nrow=28)[,28:1], col=col, ...)
 }
 
-show_image(train$x[,,,13])
-show_image(train$x[,,,54])
+oldpar <- par()
+par(mfrow=c(3,3))
+show_image(train$x[1,])
+show_image(train$x[13,])
+show_image(train$x[54,])
+show_image(train$x[100,])
+show_image(train$x[130,])
+show_image(train$x[230,])
+show_image(train$x[412,])
+show_image(train$x[454,])
+show_image(train$x[540,])
+par(oldpar)
+
 
 
 
@@ -80,6 +89,7 @@ library(caret)
 ##################### Training a single simple model ###########################
 model.nnet.simple <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, 
                           size=10, maxit=100, decay=0.5, MaxNWts = 39760)
+
 save(model.nnet.simple, file="nnet-simple.mod")
 load("nnet-simple.mod")
 
@@ -227,8 +237,8 @@ model_mxnet <- mx.model.FeedForward.create(lenet,
                 epoch.end.callback = mx.callback.log.train.metric(1))
 
 
-save(model_mxnet, file="mxnet.mod")
-load("mxnet.mod")
+mx.model.save(model_mxnet, "mxnet.mod", 50)
+mx.model.load("mxnet.mod", iteration=50)
 # Start training with 1 devices
 # [1] Train-accuracy=0.679799498746868
 # [1] Validation-accuracy=0.7516
@@ -240,7 +250,7 @@ load("mxnet.mod")
 # [4] Validation-accuracy=0.80725
 # [5] Train-accuracy=0.819
 # [5] Validation-accuracy=0.78865 
-
+# ...
 
 
 # Generating predictions
