@@ -1,61 +1,82 @@
 library(mxnet)
 
-# Input preprocessing
-# ===================
-# 
-# Before starting we need to process the images, as they are not a standard 
-# data.frame. We first are required to build a list of filenames out of the images.
-# The files are composed as binaries with a custom format in order to save space.
-# 
+################################################################################
+#                                 PREPROCESS                                   #
+################################################################################
+
+# We're going to use the FashionMNIST from Zalando which is a dataset that 
+# contains 60000 training images and 10000 testing images in grayscale (one 
+# channel) and of size 28x28.
+
 # First we decompress the files
-## ------------------------------------------------------------------------
   
-  unzip('fashionMNIST/train-images-idx3-ubyte.zip', exdir = "fashionMNIST")
-  unzip('fashionMNIST/t10k-images-idx3-ubyte.zip', exdir = "fashionMNIST")
-  unzip('fashionMNIST/train-labels-idx1-ubyte.zip', exdir = "fashionMNIST")
-  unzip('fashionMNIST/t10k-labels-idx1-ubyte.zip', exdir = "fashionMNIST")
+unzip('fashionMNIST/train-images-idx3-ubyte.zip', exdir = "fashionMNIST")
+unzip('fashionMNIST/t10k-images-idx3-ubyte.zip', exdir = "fashionMNIST")
+unzip('fashionMNIST/train-labels-idx1-ubyte.zip', exdir = "fashionMNIST")
+unzip('fashionMNIST/t10k-labels-idx1-ubyte.zip', exdir = "fashionMNIST")
 
-## ------------------------------------------------------------------------
-  load_image_file <- function(filename) {
-    ret = list()
-    f = file(filename,'rb')
-    readBin(f,'integer',n=1,size=4,endian='big')
-    ret$n = readBin(f,'integer',n=1,size=4,endian='big')
-    nrow = readBin(f,'integer',n=1,size=4,endian='big')
-    ncol = readBin(f,'integer',n=1,size=4,endian='big')
-    x = readBin(f,'integer',n=ret$n*nrow*ncol,size=1,signed=F)
-    ret$x = matrix(x, ncol=nrow*ncol, byrow=T)
-    close(f)
-    ret
-  }
 
-  load_label_file <- function(filename) {
-    f = file(filename,'rb')
-    readBin(f,'integer',n=1,size=4,endian='big')
-    n = readBin(f,'integer',n=1,size=4,endian='big')
-    y = readBin(f,'integer',n=n,size=1,signed=F)
-    close(f)
-    y
-  }
+# Now we define some auxiliary functions for loading this dataset.
+# The dataset comes in a binary form. Details about the format can be found on
+# Yann LeCun's website http://yann.lecun.com/exdb/mnist/
+
+load_image_file <- function(filename) {
+  ret = list()
+  f = file(filename,'rb')
+  readBin(f,'integer',n=1,size=4,endian='big')
+  ret$n = readBin(f,'integer',n=1,size=4,endian='big')
+  nrow = readBin(f,'integer',n=1,size=4,endian='big')
+  ncol = readBin(f,'integer',n=1,size=4,endian='big')
+  x = readBin(f,'integer',n=ret$n*nrow*ncol,size=1,signed=F)
+  ret$x = matrix(x, ncol=nrow*ncol, byrow=T)
+  close(f)
+  ret
+}
+
+load_label_file <- function(filename) {
+  f = file(filename,'rb')
+  readBin(f,'integer',n=1,size=4,endian='big')
+  n = readBin(f,'integer',n=1,size=4,endian='big')
+  y = readBin(f,'integer',n=n,size=1,signed=F)
+  close(f)
+  y
+}
+
+# Loading train and test images
+train <- load_image_file('fashionMNIST/train-images-idx3-ubyte')
+test <- load_image_file('fashionMNIST/t10k-images-idx3-ubyte')
   
-  train <- load_image_file('fashionMNIST/train-images-idx3-ubyte')
-  test <- load_image_file('fashionMNIST/t10k-images-idx3-ubyte')
+# Loading labels
+train$y <- load_label_file('fashionMNIST/train-labels-idx1-ubyte')
+test$y <- load_label_file('fashionMNIST/t10k-labels-idx1-ubyte') 
   
-  train$y <- load_label_file('fashionMNIST/train-labels-idx1-ubyte')
-  test$y <- load_label_file('fashionMNIST/t10k-labels-idx1-ubyte') 
-  
-  
-  classString <- c("T-shirt/top","Trouser", "Pullover", "Dress", "Coat", "Sandal",
+# Create a factor label array
+classString <- c("T-shirt/top","Trouser", "Pullover", "Dress", "Coat", "Sandal",
                   "Shirt","Sneaker", "Bag","Ankle boot")
   
-  train$yFactor <- as.factor(classString[train$y+1])
-  test$yFactor <- as.factor(classString[test$y+1])
+train$yFactor <- as.factor(classString[train$y+1])
+test$yFactor <- as.factor(classString[test$y+1])
 
-# Testing with nnet
-# -----------------
+################################################################################
+#                           TESTING WITH NNET                                  #
+################################################################################
+
 library(nnet)
 library(caret)
-# model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=50, maxit=300, decay=0.5, MaxNWts = 39760)
+
+# Training a single model
+model.nnet.simple <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, 
+                          size=10, maxit=100, decay=0.5, MaxNWts = 39760)
+save(model.nnet.simple, file="nnet-simple.mod")
+load("nnet-simple.mod")
+
+predT <- predict(model.nnet.simple, newdata=test$x, type="class")
+
+(tab <- table(Truth=test$yFactor, Pred=predT))
+(sum(diag(tab))/sum(tab))*100
+
+# 74.33% accuracy. Fair enough.
+
 
 ## specify 10x10 CV
 trc <- trainControl (method="repeatedcv", number=2, repeats=1)
@@ -84,7 +105,7 @@ p1 <- as.factor(predict (model.nnet, type="class"))
 
 # +1 because indexing in R starts at 1, not at 0!
 (t1 <- table(Truth=train$yFactor, Pred=p1))
-(1-sum(diag(t1))/sum(t1))*100
+(sum(diag(t1))/sum(t1))*100
 
 
 
