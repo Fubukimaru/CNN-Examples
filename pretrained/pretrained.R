@@ -26,12 +26,16 @@
 library(mxnet)
 library(imager)
 
-
-#TODO: Add Inceptionv3
 # Loading Batch-Normalized Inception network
-# Reference: Ioffe, Sergey, and Christian Szegedy. 
-#  “Batch normalization: Accelerating deep network training by reducing internal 
-#   covariate shift.” arXiv preprint arXiv:1502.03167 (2015).
+
+# Reference:   
+#  Batch normalization: Accelerating deep network training by reducing internal 
+#   covariate shift(Loffe et al., 2015).
+
+# Based on:
+# Inceptionv3 network: rethinking the inception architecture for computer vision
+# (Szegedy et al., 2015) https://arxiv.org/abs/1512.00567
+
 model = mx.model.load("Inception/Inception_BN", iteration=39)
 
 # Load average image (of all the imaged used for training)
