@@ -222,7 +222,7 @@ devices <- mx.cpu()
 # devices <- mx.gpu() # Use GPU
 
 mx.set.seed(123)
-model_mxnet <- mx.model.FeedForward.create(lenet,
+model.mxnet <- mx.model.FeedForward.create(lenet,
                 X=train$x, 
                 y=train$y,
                 eval.data = list(data=validation$x, label=validation$y), # Data for epoch evaluation
@@ -237,8 +237,8 @@ model_mxnet <- mx.model.FeedForward.create(lenet,
                 epoch.end.callback = mx.callback.log.train.metric(1))
 
 
-mx.model.save(model_mxnet, "mxnet.mod", 50)
-mx.model.load("mxnet.mod", iteration=50)
+mx.model.save(model.mxnet, "mxnet.mod", 50)
+model.mxnet <- mx.model.load("mxnet.mod", iteration=50)
 # Start training with 1 devices
 # [1] Train-accuracy=0.679799498746868
 # [1] Validation-accuracy=0.7516
@@ -257,7 +257,7 @@ mx.model.load("mxnet.mod", iteration=50)
 ################################################################################
 
 # Predicting the label for the test set
-pred_prob<- t(predict(model_mxnet, test$x))
+pred_prob<- t(predict(model.mxnet, test$x))
 head(pred_prob)
 # For each element we get the probability of that element to be of each class,
 #  therefore we search for the value that is maximum in each row as follows:
