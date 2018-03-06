@@ -57,6 +57,19 @@ classString <- c("T-shirt/top","Trouser", "Pullover", "Dress", "Coat", "Sandal",
 train$yFactor <- as.factor(classString[train$y+1])
 test$yFactor <- as.factor(classString[test$y+1])
 
+
+# TODO: CHECK THIS PART!!!
+# Check images after preprocess
+# -----------------------------
+show_image <- function(imgarray, col=gray(12:1/12), ...) {
+  image(matrix(imgarray, nrow=28)[,28:1], col=col, ...)
+}
+
+show_image(train$x[,,,13])
+show_image(train$x[,,,54])
+
+
+
 ################################################################################
 #                           TESTING WITH NNET                                  #
 ################################################################################
@@ -64,7 +77,7 @@ test$yFactor <- as.factor(classString[test$y+1])
 library(nnet)
 library(caret)
 
-# Training a single model
+##################### Training a single simple model ###########################
 model.nnet.simple <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, 
                           size=10, maxit=100, decay=0.5, MaxNWts = 39760)
 save(model.nnet.simple, file="nnet-simple.mod")
@@ -78,7 +91,7 @@ predT <- predict(model.nnet.simple, newdata=test$x, type="class")
 # 74.33% accuracy. Fair enough.
 
 
-## specify 10x10 CV
+########################### Specify 10x10 CV ###################################
 trc <- trainControl (method="repeatedcv", number=2, repeats=1)
 
 (decays <- 10^seq(-3,0,by=0.25))
@@ -88,23 +101,25 @@ library(doMC)
 
 cores <- min(detectCores()-1, ceiling(length(decays)/2))
 registerDoMC(cores = cores) 
-# Build a data.frame for the process
+
+# Build a data.frame for the process (training will fail if we use it as in the previous nnet model)
 nnetData <- data.frame(train$x, class=train$yFactor)
 
 print("Executing training")
-## Warning: This takes a while...
+## Warning: This takes a while... order of hours!
 model.2x1CV <- train (class ~ ., data=nnetData, method='nnet', maxit = 300, trace = FALSE,
                       tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
 
 
 save(model.2x1CV, file="nnet.mod")
 rm(nnetData) # Not needed anymore...
-## ------------------------------------------------------------------------
+
 load("nnet.mod")
-p1 <- as.factor(predict (model.nnet, type="class"))
+# TODO: This when models are done!
+predT2 <- as.factor(predict (model.nnet, type="class"))
 
 # +1 because indexing in R starts at 1, not at 0!
-(t1 <- table(Truth=train$yFactor, Pred=p1))
+(t1 <- table(Truth=test$yFactor, Pred=predT2))
 (sum(diag(t1))/sum(t1))*100
 
 
@@ -134,15 +149,6 @@ train$x <- train$x[,,,-valSamp, drop=FALSE]
 train$y <- train$y[-valSamp]
 
 
-
-# Check images after preprocess
-# -----------------------------
-show_image <- function(imgarray, col=gray(12:1/12), ...) {
-  image(matrix(imgarray, nrow=28)[,28:1], col=col, ...)
-}
-
-show_image(train$x[,,,13])
-show_image(train$x[,,,54])
 
 
 # Model architecture definition
