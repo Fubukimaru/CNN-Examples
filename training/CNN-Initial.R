@@ -252,9 +252,9 @@ mx.model.load("mxnet.mod", iteration=50)
 # [5] Validation-accuracy=0.78865 
 # ...
 
-
-# Generating predictions
-# ----------------------
+################################################################################
+#                        Generating predictions                                #
+################################################################################
 
 # Predicting the label for the test set
 pred_prob<- t(predict(model_mxnet, test$x))
@@ -272,19 +272,19 @@ levels(trueClass) <- classString
 
 # You should get something like this:
 #             predClass
-#trueClass     T-shirt/top Trouser Pullover Dress Coat Sandal Shirt Sneaker Bag  Ankle boot
-#  T-shirt/top         831       5        1     7    4      1   139       0  12           0
-#  Trouser              14     949        2    18    8      0     7       0   2           0
-#  Pullover             12       0      169     4  215      0   593       0   7           0
-#  Dress                44      27        0   789   62      0    78       0   0           0
-#  Coat                  1       4       14    28  628      0   324       0   1           0
-#  Sandal                0       0        0     1    0    954     0      41   1           3
-#  Shirt               179       4       16    21   58      0   705       0  17           0
-#  Sneaker               0       0        0     0    0     16     0     975   0           9
-#  Bag                   2       1        1     5    4      2    35       4 946           0
-#  Ankle boot            0       0        0     0    0     30     0      99   1         870
+#trueClass     T-shirt/top Trouser Pullover Dress Coat Sandal Shirt Sneaker Bag Ankle boot
+#  T-shirt/top         879       2       28    16    6      1    59       0   9          0
+#  Trouser               4     971        2    13    8      0     1       0   1          0
+#  Pullover             13       1      761     9  165      0    48       0   3          0
+#  Dress                21       9       12   914   33      0     6       0   5          0
+#  Coat                  0       0       54    44  850      0    52       0   0          0
+#  Sandal                0       0        0     1    0    970     0      23   1          5
+#  Shirt               175       0      113    29  113      0   554       0  16          0
+#  Sneaker               0       0        0     0    0     11     0     979   0         10
+#  Bag                   4       2       10     5    7      1     2       3 966          0
+#  Ankle boot            0       0        1     0    0      6     0      61   1        931
 
 correctClass <- sum(diag(cMatrix))
 total <- sum(cMatrix)
 (accuracy <- correctClass/total)
-
+# 87.75% accuracy
