@@ -121,17 +121,55 @@ model.2x1CV <- train (class ~ ., data=nnetData, method='nnet', maxit = 300, trac
                       tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
 
 
-save(model.2x1CV, file="nnet.mod")
+save(model.2x1CV, file="nnet-cv.mod")
 rm(nnetData) # Not needed anymore...
 
-load("nnet.mod")
-# TODO: This when models are done!
-predT2 <- as.factor(predict (model.nnet, type="class"))
+load("nnet-cv.mod") # This structure is 500MB...!
+(model.2x1CV)
+#  decay        Accuracy   Kappa      Accuracy SD   Kappa SD
+#  0.001000000  0.8259000  0.8065556  0.0043840620  0.0048711800
+#  0.001778279  0.8295500  0.8106111  0.0002592725  0.0002880805
+#  0.003162278  0.8235167  0.8039074  0.0081788684  0.0090876316
+#  0.005623413  0.8219833  0.8022037  0.0011078006  0.0012308896
+#  0.010000000  0.8287500  0.8097222  0.0043133514  0.0047926126
+#  0.017782794  0.8352167  0.8169074  0.0025220142  0.0028022380
+#  0.031622777  0.8358833  0.8176481  0.0006363961  0.0007071068
+#  0.056234133  0.8329833  0.8144259  0.0005421152  0.0006023502
+#  0.100000000  0.8377833  0.8197593  0.0017677670  0.0019641855
+#  0.177827941  0.8252000  0.8057778  0.0063168206  0.0070186895
+#  0.316227766  0.8333500  0.8148333  0.0031819805  0.0035355339
+#  0.562341325  0.8377333  0.8197037  0.0032526912  0.0036141013
+#  1.000000000  0.8394167  0.8215741  0.0064818122  0.0072020135
+
+# So, with 50 hidden units we get around 83% TRAINING accuracy.
+# And it takes veeeeery long to compute.
+
+model.nnet <- model.2x1CV$finalModel
+
+# As we trained using a dataframe with names, this step is required.
+tmp <- data.frame(test$x)
+names(tmp) <- model.nnet$xNames
+head(tmp)
+
+predT2 <- as.factor(predict (model.nnet, newdata=tmp, type="class"))
 
 # +1 because indexing in R starts at 1, not at 0!
 (t1 <- table(Truth=test$yFactor, Pred=predT2))
-(sum(diag(t1))/sum(t1))*100
+#             Pred
+# Truth         Ankle boot Bag Coat Dress Pullover Sandal Shirt Sneaker Trouser T-shirt/top
+#  Ankle boot         934   1    0     0        0     11     0      54       0            0
+#  Bag                  0 947    3     4        6      5    21       6       1            7
+#  Coat                 0   6  769    48      102      1    72       0       1            1 
+#  Dress                0   6   45   858        4      0    29       0      17           41
+#  Pullover             0   4  168    17      708      0    68       0       4           31
+#  Sandal              32  10    0     1        0    918     0      38       0            1
+#  Shirt                2  27  126    33       91      2   558       0       3          158
+#  Sneaker             32   1    0     0        0     34     0     933       0            0
+#  Trouser              0   1    7    26        3      0     3       0     955            5
+#  T-shirt/top          1  15    4    45       14      1   111       1       4          804
 
+(sum(diag(t1))/sum(t1))*100
+# 83.84% of training error. Better than our first attempt!
 
 
 # Reshape data for CNN input
@@ -164,11 +202,7 @@ train$y <- train$y[-valSamp]
 # Model architecture definition
 # -----------------------------
 # 
-# Now we have to define the CNN arcir <- rbind(iris3[,,1],iris3[,,2],iris3[,,3])
-# targets <- class.ind( c(rep("s", 50), rep("c", 50), rep("v", 50)) )
-# samp <- c(sample(1:50,25), sample(51:100,25), sample(101:150,25))
-# ir1 <- nnet(ir[samp,], targets[samp,], size = 2, rang = 0.1,
-# decay = 5e-4, maxit = 200)hitecture. In this case we use LeNet, proposed
+# Now we have to define the CNN architecture. In this case we use LeNet, proposed
 # by LeCun et al. (Gradient-based learning applied to document recognition. 
 # Proceedings of the IEEE, november 1998). 
 # 
@@ -236,9 +270,6 @@ model.mxnet <- mx.model.FeedForward.create(lenet,
                 eval.metric=mx.metric.accuracy, 
                 epoch.end.callback = mx.callback.log.train.metric(1))
 
-
-mx.model.save(model.mxnet, "mxnet.mod", 50)
-model.mxnet <- mx.model.load("mxnet.mod", iteration=50)
 # Start training with 1 devices
 # [1] Train-accuracy=0.679799498746868
 # [1] Validation-accuracy=0.7516
@@ -251,6 +282,12 @@ model.mxnet <- mx.model.load("mxnet.mod", iteration=50)
 # [5] Train-accuracy=0.819
 # [5] Validation-accuracy=0.78865 
 # ...
+
+
+# MXNet has its own model saving format and functions (same as we used in Inception)
+mx.model.save(model.mxnet, "mxnet.mod", 50)
+
+model.mxnet <- mx.model.load("mxnet.mod", iteration=50)
 
 ################################################################################
 #                        Generating predictions                                #
@@ -287,4 +324,4 @@ levels(trueClass) <- classString
 correctClass <- sum(diag(cMatrix))
 total <- sum(cMatrix)
 (accuracy <- correctClass/total)
-# 87.75% accuracy
+# 87.75% accuracy. Better and faster!
