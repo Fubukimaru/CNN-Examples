@@ -1,0 +1,160 @@
+---
+jupyter:
+  jupytext:
+    formats: ipynb,Rmd:rmarkdown
+    text_representation:
+      extension: .Rmd
+      format_name: rmarkdown
+      format_version: '1.0'
+      jupytext_version: 0.8.5
+  kernelspec:
+    display_name: R
+    language: R
+    name: ir
+  language_info:
+    codemirror_mode: r
+    file_extension: .r
+    mimetype: text/x-r-source
+    name: R
+    pygments_lexer: r
+    version: 3.5.1
+---
+
+```{r}
+library(keras)  # FashionMNIST dataset
+#library(nnet)  # Neural networks
+library(caret)  # Cross Validation - loads nnet directly on trainControl
+
+library(doMC)   # Parallel cross-validation
+```
+
+# Dataset
+
+
+First we load the dataset from keras package. _Check legacyLoad.R to see how to load the dataset without using the package._
+
+```{r}
+fashion <- dataset_fashion_mnist()
+```
+
+```{r}
+str(fashion)
+attach(fashion) # So we can access test and train directly!
+```
+
+We get the following structure:
+
+- train: Training dataset
+    + x: the predictors, 28x28 pixels image in grayscale.
+    + y: the response
+- test: Testing datset (with x and y)
+
+We can see the images with the following function:
+
+```{r}
+rotate <- function(x) t(apply(x, 2, rev))
+show_image <- function(imgarray, col=gray(12:1/12), ...) {
+  image(rotate(matrix(imgarray, nrow=28)), col=col, ...)
+}
+
+show_image(train$x[2,,])
+show_image(train$x[10,,])
+```
+
+Notice that in y we have an integer from 0 to 9 (10 classes). They are in fact the following:
+- 0: T-shirt/top
+- 1: Trouser
+- 2: Pullover
+- 3: Dress
+- 4: Coat
+- 5: Sandal
+- 6: Shirt
+- 7: Sneaker
+- 8: Bag
+- 9: Ankle boot
+
+We recode the response variable to factor.
+
+```{r}
+classString <- c("T-shirt/top","Trouser", "Pullover", "Dress", "Coat", "Sandal",
+              "Shirt","Sneaker", "Bag","Ankle boot")
+
+# y+1 because 0 is the first class and in R we start indexing at 1!
+train$yFactor <- as.factor(classString[train$y+1]) 
+test$yFactor <- as.factor(classString[test$y+1])
+```
+
+# Training
+
+
+We can train the model directly as follows, but we will use _caret's_
+_trainControl_ for CrossValidation.
+
+```{r}
+# model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=50, maxit=300, decay=0.5, MaxNWts = 39760)
+```
+
+TODO: CHANGE THE NUMBEEEEEEEEEEEEEEEEEEEEEEEEEEEER
+```{r}
+## specify 10-CV
+
+# TODO: CHANGE number 1 to 10
+trc <- trainControl (method="repeatedcv", number=1, repeats=1)
+(decays <- 10^seq(-3,0,by=0.25))
+```
+
+
+
+```{r}
+# Use all cores except one (recommended if you want to use your computer for something else)
+cores <- min(detectCores()-1, ceiling(length(decays)/2))
+registerDoMC(cores = cores) 
+```
+
+```{r}
+# Prepare dataset
+nnetData <- data.frame(train$x, class=train$yFactor)
+```
+
+```{r}
+head(nnetData)
+```
+
+```{r}
+sub <- nnetData[1:100,]
+```
+
+```{r}
+library(nnet)
+model.nnet <- nnet(class ~ ., data=sub, size=50, maxit=1,decay=0.5, MaxNWts = 39760)
+```
+
+```{r}
+length(t(train$yFactor))
+```
+
+```{r}
+head(sub)
+```
+
+```{r}
+str(train$x)
+str(train$yFactor)
+str(class.ind(train$yFactor))
+```
+
+```{r}
+print("Executing training")
+## WARNING: this takes some time (around 10')
+model.2x1CV <- train (class ~ ., data=sub, method='nnet', maxit = 300, trace = FALSE,
+                      tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
+```
+
+```{r}
+# Save model
+save(model.2x1CV, file="nnet.mod")
+```
+
+```{r}
+load("nnet.mod")
+```
