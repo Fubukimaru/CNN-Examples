@@ -22,7 +22,7 @@ jupyter:
 
 ```{r}
 library(keras)  # FashionMNIST dataset
-#library(nnet)  # Neural networks
+library(nnet)  # Neural networks
 library(caret)  # Cross Validation - loads nnet directly on trainControl
 
 library(doMC)   # Parallel cross-validation
@@ -84,6 +84,13 @@ train$yFactor <- as.factor(classString[train$y+1])
 test$yFactor <- as.factor(classString[test$y+1])
 ```
 
+Now we prepare join the X and the Y in a data.frame.
+
+```{r}
+# Prepare dataset
+nnetData <- data.frame(train$x, class=train$yFactor)
+```
+
 # Training
 
 
@@ -94,65 +101,41 @@ _trainControl_ for CrossValidation.
 # model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=50, maxit=300, decay=0.5, MaxNWts = 39760)
 ```
 
-TODO: CHANGE THE NUMBEEEEEEEEEEEEEEEEEEEEEEEEEEEER
 ```{r}
-## specify 10-CV
-
-# TODO: CHANGE number 1 to 10
-trc <- trainControl (method="repeatedcv", number=1, repeats=1)
+## specify 5-CV
+K <- 5
+trc <- trainControl (method="repeatedcv", number=K, repeats=1)
 (decays <- 10^seq(-3,0,by=0.25))
 ```
-
-
+We now specify that we want to execute the cross validation in parallel:
 
 ```{r}
 # Use all cores except one (recommended if you want to use your computer for something else)
 cores <- min(detectCores()-1, ceiling(length(decays)/2))
 registerDoMC(cores = cores) 
+
+# Beware with the number of cores used, it will impact in the RAM usage. ~10GB per thread with 60K Fashion MNIST samples
 ```
 
 ```{r}
-# Prepare dataset
-nnetData <- data.frame(train$x, class=train$yFactor)
-```
-
-```{r}
-head(nnetData)
-```
-
-```{r}
-sub <- nnetData[1:100,]
-```
-
-```{r}
-library(nnet)
-model.nnet <- nnet(class ~ ., data=sub, size=50, maxit=1,decay=0.5, MaxNWts = 39760)
-```
-
-```{r}
-length(t(train$yFactor))
-```
-
-```{r}
-head(sub)
-```
-
-```{r}
-str(train$x)
-str(train$yFactor)
-str(class.ind(train$yFactor))
+#library(nnet)
+#model.nnet <- nnet(class ~ ., data=sub, size=50, maxit=3,decay=0.5, MaxNWts = 39760)
 ```
 
 ```{r}
 print("Executing training")
-## WARNING: this takes some time (around 10')
-model.2x1CV <- train (class ~ ., data=sub, method='nnet', maxit = 300, trace = FALSE,
+## WARNING: this takes some time
+model.5CV <- train (class ~ ., data=nnetData, method='nnet', maxit = 300, trace = FALSE,
                       tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
 ```
 
 ```{r}
+model.5CV
+```
+
+```{r}
 # Save model
-save(model.2x1CV, file="nnet.mod")
+save(model.5CV, file="nnet.mod")
 ```
 
 ```{r}
