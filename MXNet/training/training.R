@@ -1,3 +1,24 @@
+#' ---
+#' jupyter:
+#'   jupytext:
+#'     text_representation:
+#'       extension: .R
+#'       format_name: spin
+#'       format_version: '1.0'
+#'       jupytext_version: 0.8.5
+#'   kernelspec:
+#'     display_name: R
+#'     language: R
+#'     name: ir
+#'   language_info:
+#'     codemirror_mode: r
+#'     file_extension: .r
+#'     mimetype: text/x-r-source
+#'     name: R
+#'     pygments_lexer: r
+#'     version: 3.5.1
+#' ---
+
 library(mxnet)
 
 ################################################################################
@@ -9,7 +30,7 @@ library(mxnet)
 # channel) and of size 28x28.
 
 # First we decompress the files
-  
+
 unzip('fashionMNIST/train-images-idx3-ubyte.zip', exdir = "fashionMNIST")
 unzip('fashionMNIST/t10k-images-idx3-ubyte.zip', exdir = "fashionMNIST")
 unzip('fashionMNIST/train-labels-idx1-ubyte.zip', exdir = "fashionMNIST")
@@ -45,15 +66,15 @@ load_label_file <- function(filename) {
 # Loading train and test images
 train <- load_image_file('fashionMNIST/train-images-idx3-ubyte')
 test <- load_image_file('fashionMNIST/t10k-images-idx3-ubyte')
-  
+
 # Loading labels
 train$y <- load_label_file('fashionMNIST/train-labels-idx1-ubyte')
 test$y <- load_label_file('fashionMNIST/t10k-labels-idx1-ubyte') 
-  
+
 # Create a factor label array
 classString <- c("T-shirt/top","Trouser", "Pullover", "Dress", "Coat", "Sandal",
                   "Shirt","Sneaker", "Bag","Ankle boot")
-  
+
 train$yFactor <- as.factor(classString[train$y+1])
 test$yFactor <- as.factor(classString[test$y+1])
 
@@ -153,7 +174,7 @@ head(tmp)
 
 predT2 <- as.factor(predict (model.nnet, newdata=tmp, type="class"))
 
-# +1 because indexing in R starts at 1, not at 0!
+# # +1 because indexing in R starts at 1, not at 0!
 (t1 <- table(Truth=test$yFactor, Pred=predT2))
 #             Pred
 # Truth         Ankle boot Bag Coat Dress Pullover Sandal Shirt Sneaker Trouser T-shirt/top
