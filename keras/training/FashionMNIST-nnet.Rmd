@@ -98,8 +98,11 @@ We can train the model directly as follows, but we will use _caret's_
 _trainControl_ for CrossValidation.
 
 ```{r}
-# model.nnet <- nnet(x=train$x, y=class.ind(train$yFactor), softmax=TRUE, size=50, maxit=300, decay=0.5, MaxNWts = 39760)
+# model.nnet <- nnet(class ~ ., data=sub, size=50, maxit=300,decay=0.5, MaxNWts = 39760)
 ```
+
+Specifically a 5 fold cross-validation. We don't go for a 10 fold
+cross-validation as it will take a lot of time to compute.
 
 ```{r}
 ## specify 5-CV
@@ -114,23 +117,19 @@ We now specify that we want to execute the cross validation in parallel:
 cores <- min(detectCores()-1, ceiling(length(decays)/2))
 registerDoMC(cores = cores) 
 
-# Beware with the number of cores used, it will impact in the RAM usage. ~10GB per thread with 60K Fashion MNIST samples
 ```
+Beware with the number of cores used, it will impact in the RAM usage. ~10GB per thread with 60K Fashion MNIST samples.
+
+The cross-validation process will take about 30 hours using 7 cores of a Intel(R) 
+Xeon(R) CPU E5-2630 v4 @ 2.20GHz and about 80 GB of RAM.
+
+Remember that we're training (number_of_decay_param x number_of_folds) = 14 x 5
+= 70 models.
 
 ```{r}
-#library(nnet)
-#model.nnet <- nnet(class ~ ., data=sub, size=50, maxit=3,decay=0.5, MaxNWts = 39760)
-```
-
-```{r}
-print("Executing training")
 ## WARNING: this takes some time
 model.5CV <- train (class ~ ., data=nnetData, method='nnet', maxit = 300, trace = FALSE,
                       tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
-```
-
-```{r}
-model.5CV
 ```
 
 ```{r}
@@ -141,3 +140,12 @@ save(model.5CV, file="nnet.mod")
 ```{r}
 load("nnet.mod")
 ```
+
+```{r}
+model.5CV
+```
+
+The best model we got has an accuracy of 84%. Not bad at all for a 10 class
+classificatin problem.
+
+
