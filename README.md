@@ -6,10 +6,14 @@ application using MXNet CNN implementation on R.
 
 Structure
 ---------
++ MXNet: 
+  - install: Reference on how to install the required software to use MXNet.
+  - training: Code for training models
+  - pretrained: Code for using pretrained models
++ Keras:
+  - training: Code for training models
+  - pretrained: Code for using pretrained models
 
-- install: Reference on how to install the required software for using MXNet.
-- training: Code for training models
-- pretrained: Code for using pretrained models
 
 References
 ----------
@@ -23,5 +27,7 @@ References
 
 ### Technical references
 - [MXNet R official reference][Tech1]
+- [Keras R official reference][Tech2]
 
 [Tech1]: https://mxnet.incubator.apache.org/api/r/index.html
+[Tech2]: http://keras.rstudio.com/
