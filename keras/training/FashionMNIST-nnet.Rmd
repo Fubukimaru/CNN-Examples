@@ -149,3 +149,117 @@ The best model we got has an accuracy of 84%. Not bad at all for a 10 class
 classificatin problem.
 
 
+# Convolutional Neural Networks
+
+## Model architecture definition: LeNet
+
+Now we have to define the CNN architecture. In this case we use LeNet, proposed
+by LeCun et al. (Gradient-based learning applied to document recognition. 
+Proceedings of the IEEE, november 1998). 
+
+It is composed by two packs of convolutional-activation(tanh)-pooling layers and
+two fully connected layers with a softmax layer at the end.
+
+In Keras, as in most of the packages, we define layers as objects and the 
+connections between those objects. In this case we implicitly connect everything
+using the %>% operator.
+
+```{r}
+lenet <- keras_model_sequential() %>%
+    # First convolutional block
+    layer_conv_2d(filters=20, kernel_size=c(5,5), activation="tanh",
+        input_shape=c(28,28,1)) %>%  # We define here the input size
+    layer_max_pooling_2d(pool_size=c(2,2),strides=c(2,2)) %>%
+    # Second convolutional block
+    layer_conv_2d(filters=50, kernel_size=c(5,5), activation="tanh",
+        input_shape=c(28,28,1)) %>% 
+    layer_max_pooling_2d(pool_size=c(2,2),strides=c(2,2)) %>%
+    
+    # Flatten the matrix to a vector for the fully connected layers
+    layer_flatten() %>%
+
+    # First fully connected block
+    layer_dense(units=500, activation="tanh") %>%
+    # Second fully connected block
+    layer_dense(units=10, activation="softmax") 
+    # This last layer will produce the final classification (probability of 
+    # belonging to a class)
+```
+
+Now we check the architecture we have defined:
+```{r}
+lenet
+```
+
+Last thing we have to do is to specify which optimizaton algorithm and metrics
+we want to use with the compile step.
+
+```{r}
+sgd = optimizers.SGD(
+                     lr=0.05, 
+                     decay=0.001, 
+                     momentum=0.8, 
+                     clipnorm=1.
+)
+lenet.compile(
+              loss='categorical_crossentropy', 
+              metrics = "accuracy",
+              optimizer=sgd
+)
+```
+
+## Model training
+
+Now we're going to train the network using CPU (if you're not using
+tensorflow-gpu). Mind that if you want to use GPUs you need to have the GPU 
+version of the package and the required Nvidia packages (check PlaidML for 
+non-Nvidia GPUs). 
+
+```{r} 
+lenet.fit(
+          train$x, 
+          train$y, 
+          batch_size=50,
+          epochs=10
+)
+```
+
+And now we save the trained model for convenience:
+```{r}
+
+```
+
+## Predicting using the model
+```{r}
+# Predicting the label for the test set
+pred_prob<- t(predict(lenet, test$x))
+head(pred_prob)
+# For each element we get the probability of that element to be of each class,
+#  therefore we search for the value that is maximum in each row as follows:
+predClass <- factor(apply(pred_prob,1,which.max))
+levels(predClass) <- classString # Change integers to string representation
+
+trueClass <- factor(test$y)
+levels(trueClass) <- classString
+
+# Now we do a confusion matrix and analyze it
+(cMatrix <- table(trueClass,predClass))
+
+# You should get something like this:
+#             predClass
+#trueClass     T-shirt/top Trouser Pullover Dress Coat Sandal Shirt Sneaker Bag Ankle boot
+#  T-shirt/top         879       2       28    16    6      1    59       0   9          0
+#  Trouser               4     971        2    13    8      0     1       0   1          0
+#  Pullover             13       1      761     9  165      0    48       0   3          0
+#  Dress                21       9       12   914   33      0     6       0   5          0
+#  Coat                  0       0       54    44  850      0    52       0   0          0
+#  Sandal                0       0        0     1    0    970     0      23   1          5
+#  Shirt               175       0      113    29  113      0   554       0  16          0
+#  Sneaker               0       0        0     0    0     11     0     979   0         10
+#  Bag                   4       2       10     5    7      1     2       3 966          0
+#  Ankle boot            0       0        1     0    0      6     0      61   1        931
+
+correctClass <- sum(diag(cMatrix))
+total <- sum(cMatrix)
+(accuracy <- correctClass/total)
+```
