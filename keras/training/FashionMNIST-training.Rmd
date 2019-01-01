@@ -51,6 +51,9 @@ We get the following structure:
 
 We can see the images with the following function:
 
+
+## dataset visualization
+
 ```{r}
 rotate <- function(x) t(apply(x, 2, rev))
 show_image <- function(imgarray, col=gray(12:1/12), ...) {
@@ -60,6 +63,9 @@ show_image <- function(imgarray, col=gray(12:1/12), ...) {
 show_image(train$x[2,,])
 show_image(train$x[10,,])
 ```
+
+## Response reencode
+
 
 Notice that in y we have an integer from 0 to 9 (10 classes). They are in fact the following:
 - 0: T-shirt/top
@@ -84,6 +90,58 @@ train$yFactor <- as.factor(classString[train$y+1])
 test$yFactor <- as.factor(classString[test$y+1])
 ```
 
+For the CNN we use one hot encoding to produce a vector of 10 values per sample, with a one on the class.
+
+```{r}
+train$yOneHot <- class.ind(train$yFactor)
+test$yOneHot <- class.ind(test$yFactor)
+```
+
+```{r}
+str(train$yOneHot)
+train$y[1:10]
+train$yOneHot[1:10,]
+```
+
+*class.ind* reorders the classes alfabetically, therefore we need to revert this order to the original provided. We use *match* over the column names to get a vector of the reorder to match the column names to **classString**.
+
+```{r}
+colnames(train$yOneHot)
+classString
+(m <- match(classString, colnames(test$yOneHot))) 
+```
+
+```{r}
+train$yOneHot <- train$yOneHot[,m]
+test$yOneHot <- test$yOneHot[,m]
+```
+
+Now the order is correct
+
+```{r}
+colnames(train$yOneHot)
+classString
+```
+
+## Add missing dimension
+
+
+Convolutional layers will expect the input to have 4 dimensions:
+- Sample dimension
+- Height dimension
+- Width dimension
+- Channel dimension
+
+In our case we have only one channel as the image is grayscale. If it's a color image we would have 3 or 4 channels (Red, Green, Blue and Alpha (transparency)). We need to add the missing dimension, however this will not modify the data. 
+
+```{r}
+dim(train$x) <- c(dim(train$x),1)
+dim(test$x) <- c(dim(test$x),1)
+```
+
+## Create a dataset for nnet
+
+
 Now we prepare join the X and the Y in a data.frame.
 
 ```{r}
@@ -91,7 +149,7 @@ Now we prepare join the X and the Y in a data.frame.
 nnetData <- data.frame(train$x, class=train$yFactor)
 ```
 
-# Training
+# Training a Neural Network
 
 
 We can train the model directly as follows, but we will use _caret's_
@@ -168,11 +226,11 @@ using the %>% operator.
 lenet <- keras_model_sequential() %>%
     # First convolutional block
     layer_conv_2d(filters=20, kernel_size=c(5,5), activation="tanh",
-        input_shape=c(28,28,1)) %>%  # We define here the input size
+        input_shape=c(28,28,1), padding="same") %>%  # We define here the input size
     layer_max_pooling_2d(pool_size=c(2,2),strides=c(2,2)) %>%
     # Second convolutional block
     layer_conv_2d(filters=50, kernel_size=c(5,5), activation="tanh",
-        input_shape=c(28,28,1)) %>% 
+        input_shape=c(28,28,1), padding="same") %>% 
     layer_max_pooling_2d(pool_size=c(2,2),strides=c(2,2)) %>%
     
     # Flatten the matrix to a vector for the fully connected layers
@@ -183,7 +241,7 @@ lenet <- keras_model_sequential() %>%
     # Second fully connected block
     layer_dense(units=10, activation="softmax") 
     # This last layer will produce the final classification (probability of 
-    # belonging to a class)
+    # belonging to a class). 10 different units, 10 different classes.
 ```
 
 Now we check the architecture we have defined:
@@ -195,16 +253,15 @@ Last thing we have to do is to specify which optimizaton algorithm and metrics
 we want to use with the compile step.
 
 ```{r}
-sgd = optimizers.SGD(
+sgd <- optimizer_sgd(
                      lr=0.05, 
                      decay=0.001, 
                      momentum=0.8, 
                      clipnorm=1.
 )
-lenet.compile(
+lenet %>% compile(optimizer=sgd,
               loss='categorical_crossentropy', 
-              metrics = "accuracy",
-              optimizer=sgd
+              metrics = "accuracy"
 )
 ```
 
@@ -215,50 +272,47 @@ tensorflow-gpu). Mind that if you want to use GPUs you need to have the GPU
 version of the package and the required Nvidia packages (check PlaidML for 
 non-Nvidia GPUs). 
 
-```{r} 
-lenet.fit(
+```{r}
+lenet %>% fit(
           train$x, 
-          train$y, 
+          train$yOneHot, 
           batch_size=50,
           epochs=10
 )
 ```
 
+Takes about 3 minuts with 40 cores and 18 GB of RAM.
+
+
 And now we save the trained model for convenience:
 ```{r}
-
+lenet %>% save_model_hdf5("lenet-FashionMNIST.h5")
 ```
 
 ## Predicting using the model
 ```{r}
 # Predicting the label for the test set
-pred_prob<- t(predict(lenet, test$x))
+pred_prob<- predict(lenet, test$x)
+```
+
+```{r}
 head(pred_prob)
+```
+
+```{r}
 # For each element we get the probability of that element to be of each class,
 #  therefore we search for the value that is maximum in each row as follows:
-predClass <- factor(apply(pred_prob,1,which.max))
-levels(predClass) <- classString # Change integers to string representation
+predClass <- apply(pred_prob,1,which.max)
+predClass <- classString[predClass] # And change the integers by their class tag
+#levels(predClass) <- classString # Change integers to string representation
 
-trueClass <- factor(test$y)
-levels(trueClass) <- classString
+trueClass <- test$yFactor
 
 # Now we do a confusion matrix and analyze it
 (cMatrix <- table(trueClass,predClass))
+```
 
-# You should get something like this:
-#             predClass
-#trueClass     T-shirt/top Trouser Pullover Dress Coat Sandal Shirt Sneaker Bag Ankle boot
-#  T-shirt/top         879       2       28    16    6      1    59       0   9          0
-#  Trouser               4     971        2    13    8      0     1       0   1          0
-#  Pullover             13       1      761     9  165      0    48       0   3          0
-#  Dress                21       9       12   914   33      0     6       0   5          0
-#  Coat                  0       0       54    44  850      0    52       0   0          0
-#  Sandal                0       0        0     1    0    970     0      23   1          5
-#  Shirt               175       0      113    29  113      0   554       0  16          0
-#  Sneaker               0       0        0     0    0     11     0     979   0         10
-#  Bag                   4       2       10     5    7      1     2       3 966          0
-#  Ankle boot            0       0        1     0    0      6     0      61   1        931
-
+```{r}
 correctClass <- sum(diag(cMatrix))
 total <- sum(cMatrix)
 (accuracy <- correctClass/total)
