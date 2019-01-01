@@ -90,7 +90,7 @@ train$yFactor <- as.factor(classString[train$y+1])
 test$yFactor <- as.factor(classString[test$y+1])
 ```
 
-For the CNN we use one hot encoding to produce a vector of 10 values per sample, with a one on the class.
+For the CNN we use one hot encoding to produce a vector of 10 values per sample, with a one on the class (probablity of belonging to a given class).
 
 ```{r}
 train$yOneHot <- class.ind(train$yFactor)
@@ -145,7 +145,6 @@ dim(test$x) <- c(dim(test$x),1)
 Now we prepare join the X and the Y in a data.frame.
 
 ```{r}
-# Prepare dataset
 nnetData <- data.frame(train$x, class=train$yFactor)
 ```
 
@@ -156,7 +155,7 @@ We can train the model directly as follows, but we will use _caret's_
 _trainControl_ for CrossValidation.
 
 ```{r}
-# model.nnet <- nnet(class ~ ., data=sub, size=50, maxit=300,decay=0.5, MaxNWts = 39760)
+model.nnet <- nnet(class ~ ., data=nnetData, size=50, maxit=300,decay=0.5, MaxNWts = 39760)
 ```
 
 Specifically a 5 fold cross-validation. We don't go for a 10 fold
@@ -171,12 +170,11 @@ trc <- trainControl (method="repeatedcv", number=K, repeats=1)
 We now specify that we want to execute the cross validation in parallel:
 
 ```{r}
-# Use all cores except one (recommended if you want to use your computer for something else)
+# Use all cores except one (recommended if you want to use your computer for something else). Or half of the lenght of the decays (RAM issues).
 cores <- min(detectCores()-1, ceiling(length(decays)/2))
 registerDoMC(cores = cores) 
-
 ```
-Beware with the number of cores used, it will impact in the RAM usage. ~10GB per thread with 60K Fashion MNIST samples.
+Beware with the number of cores used, it will impact in the RAM usage. ~10GB per thread with 60K Fashion MNIST samples. **Don't execute this training if you don't have a big machine, just load the model.**
 
 The cross-validation process will take about 30 hours using 7 cores of a Intel(R) 
 Xeon(R) CPU E5-2630 v4 @ 2.20GHz and about 80 GB of RAM.
@@ -204,7 +202,7 @@ model.5CV
 ```
 
 The best model we got has an accuracy of 84%. Not bad at all for a 10 class
-classificatin problem.
+classification problem.
 
 
 # Convolutional Neural Networks
@@ -249,6 +247,8 @@ Now we check the architecture we have defined:
 lenet
 ```
 
+Notice that we're adjusting 1 million parameters this time. With the nnet one layer network we were training just 39.760 parameters.
+
 Last thing we have to do is to specify which optimizaton algorithm and metrics
 we want to use with the compile step.
 
@@ -281,7 +281,7 @@ lenet %>% fit(
 )
 ```
 
-Takes about 3 minuts with 40 cores and 18 GB of RAM.
+Takes about 3 minuts with 40 cores and 18 GB of RAM. It may take less with GPUs!
 
 
 And now we save the trained model for convenience:
@@ -290,21 +290,23 @@ lenet %>% save_model_hdf5("lenet-FashionMNIST.h5")
 ```
 
 ## Predicting using the model
+
+Predicting the label for the test set
+
 ```{r}
-# Predicting the label for the test set
-pred_prob<- predict(lenet, test$x)
+pred_prob <- predict(lenet, test$x)
 ```
 
 ```{r}
 head(pred_prob)
 ```
 
+For each element we get the probability of that element to be of each class, therefore we search for the value that is maximum in each row and then we create the confusion matrix.
+
 ```{r}
-# For each element we get the probability of that element to be of each class,
-#  therefore we search for the value that is maximum in each row as follows:
 predClass <- apply(pred_prob,1,which.max)
 predClass <- classString[predClass] # And change the integers by their class tag
-#levels(predClass) <- classString # Change integers to string representation
+
 
 trueClass <- test$yFactor
 
@@ -317,3 +319,5 @@ correctClass <- sum(diag(cMatrix))
 total <- sum(cMatrix)
 (accuracy <- correctClass/total)
 ```
+
+We're getting about a 90% of accuracy that may be improved with further tunning of the network. Notice that, for example, there are 30 ankle boots classified as sneakers, that can have similar shapes. Also there are 113 pullovers are classified as coats.
