@@ -1,8 +1,29 @@
+#' ---
+#' jupyter:
+#'   jupytext:
+#'     text_representation:
+#'       extension: .R
+#'       format_name: spin
+#'       format_version: '1.0'
+#'       jupytext_version: 0.8.5
+#'   kernelspec:
+#'     display_name: R
+#'     language: R
+#'     name: ir
+#'   language_info:
+#'     codemirror_mode: r
+#'     file_extension: .r
+#'     mimetype: text/x-r-source
+#'     name: R
+#'     pygments_lexer: r
+#'     version: 3.5.1
+#' ---
+
 ################################################################################
 #                           INSTALLATION DETAILS                               #
 ################################################################################
 
- 
+
 # MXNet is a package that is quite new in the R world, therefore is not included
 # in CRAN repository. In order to install this package you can follow the instructions
 # found in https://mxnet.incubator.apache.org/install/index.html. Windows/MacOS is
@@ -54,8 +75,6 @@ plot(as.cimg(mean.img))
 synsets <- readLines("Inception/synset.txt")
 length(synsets)
 head(synsets)
-
-
 
 ################################################################################
 #                       USEFULL AUXILIARY FUNCTIONS                            #

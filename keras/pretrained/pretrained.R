@@ -1,57 +1,72 @@
-################################################################################
-#                           INSTALLATION DETAILS                               #
-################################################################################
- 
-# Mind that if you want to use your GPU (Nvida CUDA compatible is needed), you
-# need to install the GPU version of the package along with CUDA, Nvidia's package
-# for interfacing between the user and the GPU, and cuDNN, a Deep Neural Network
-# base package.
-# 
-# - CUDA: http://www.nvidia.es/object/cuda-parallel-computing-es.html
-# - cuDNN: https://developer.nvidia.com/cudnn
+#' ---
+#' jupyter:
+#'   jupytext:
+#'     text_representation:
+#'       extension: .R
+#'       format_name: spin
+#'       format_version: '1.0'
+#'       jupytext_version: 0.8.5
+#'   kernelspec:
+#'     display_name: R
+#'     language: R
+#'     name: ir
+#'   language_info:
+#'     codemirror_mode: r
+#'     file_extension: .r
+#'     mimetype: text/x-r-source
+#'     name: R
+#'     pygments_lexer: r
+#'     version: 3.5.1
+#' ---
 
-# Notice that training NN with CPU is slower than using GPU, even though
-# Keras/Tensorflow does some kind of paralelization of the operations using BLAS 
-# libraries (Basic Linear Algebra Subprograms). Therefore, GPU usage is advised 
-# for this session. But don't worry, the code for CPU and GPU is exactly the 
-# same except for one line where we define the execution.
+#' # Installation details
 
+#' Mind that if you want to use your GPU (Nvida CUDA compatible is needed), you
+#' need to install the GPU version of the package along with CUDA, Nvidia's package
+#' for interfacing between the user and the GPU, and cuDNN, a Deep Neural Network
+#' base package.
+#'
+#' - CUDA: http://www.nvidia.es/object/cuda-parallel-computing-es.html
+#' - cuDNN: https://developer.nvidia.com/cudnn
 
+#' Notice that training NN with CPU is slower than using GPU, even though
+#' Keras/Tensorflow does some kind of paralelization of the operations using BLAS 
+#' libraries (Basic Linear Algebra Subprograms). Therefore, GPU usage is advised 
+#' for this session. But don't worry, the code for CPU and GPU is exactly the 
+#' same except for one line where we define the execution.
 
-################################################################################
-#                               LOADING MODEL                                  #
-################################################################################
+#' # Loading the model
 
 library(keras)
 library(imager)
 
-# Loading Batch-Normalized Inception network
-
-# Reference:   
-#  Batch normalization: Accelerating deep network training by reducing internal 
-#   covariate shift(Loffe et al., 2015).
-
-# Based on:
-# Inceptionv3 network: rethinking the inception architecture for computer vision
-# (Szegedy et al., 2015) https://arxiv.org/abs/1512.00567
+#' Loading Batch-Normalized Inception network
+#'
+#' Reference:   
+#'  - Batch normalization: Accelerating deep network training by reducing internal covariate shift(Loffe et al., 2015).
+#'  
+#' Based on Inceptionv3 network: rethinking the inception architecture for computer vision (Szegedy et al., 2015) https://arxiv.org/abs/1512.00567
 
 model <- application_inception_v3(include_top = TRUE, weights = "imagenet",
   input_tensor = NULL, input_shape = NULL, pooling = NULL,
   classes = 1000)
 
-# Now we get the class names
-synsets <- readLines("Inception/synset.txt")
+#' Now we check the model:
+
+model
+
+#' # Load model's classes
+
+#' The predictions of the network can be decoded with *imagenet_decode_predictions*, however we will use the original text file so we know how it is done.
+
+synsets <- readLines("synset.txt")
 length(synsets)
 head(synsets)
 
-
-
-################################################################################
-#                       USEFULL AUXILIARY FUNCTIONS                            #
-################################################################################
+#' # Image preprocess functions
 
 # Image preprocess
-preproc.image <- function(im, mean.image, crop = TRUE, dims=3) {
+preproc.image <- function(im, crop = TRUE, dims=3) {
   if (crop) {
     ## Crop the image so it gets same height and width
     shape <- dim(im)
@@ -66,11 +81,10 @@ preproc.image <- function(im, mean.image, crop = TRUE, dims=3) {
   # Convert to array (x, y, channel)
   arr <- as.array(resized) * 255 # From 0..1 to 0..255 (RGB integer codification)
   dim(arr) <- c(224, 224, 3)
-  # Subtract the mean
-  preproc <- arr - mean.img
-  # Reshape to format needed by mxnet (width, height, channel, num)
-  dim(preproc) <- c(224, 224, 3, 1)
-  return(preproc)
+
+  # Reshape to format needed by the network (num, width, height, channel)
+  dim(arr) <- c(1,224, 224, 3)
+  return(arr)
 }
 
 # Result printing
@@ -81,17 +95,12 @@ printClassRank <- function(prob, labels, nRes = 10) {
   head(res, n = nRes)
 }
 
-################################################################################
-#                           IMAGE CLASSIFICATION                               # 
-################################################################################
+#' # Image classification
 
 # Modifying plot area so that we can see the original photo and the preprocessed
 #  photo
 oldpar <- par() # We can save the old configuration using empty par()
 par(mfrow=c(1,2))
-
-
-
 
 ######## Starters: Take an image from imageR package - Give me macaws! #########
 im <- load.image(system.file("extdata/parrots.png", package="imager"))
@@ -102,22 +111,19 @@ dim(im)
 #  images of size 224x224, we need to resize them.
 
 # Preprocess the parrots
-preproc <- preproc.image(im, mean.img)
+preproc <- preproc.image(im)
 plot(as.cimg(preproc[,,,1]))
 dim(preproc)
 # We can observe that the image has been reduced, now has height = width and
 #  the color is a little off because of the subtraction of the mean image.
 
 # Predict the parrots! In other words, get the class probabilities
-prob <- predict(model, X=preproc)
+prob <- predict(model, preproc)
 dim(prob)
 
 # Which classes ar the most representative
 printClassRank(prob, synsets)
 # It's a Macaw!
-
-
-
 
 ##### Now with something completely different: A laptop with Alpha Channel #####
 # Load new image
@@ -138,26 +144,23 @@ dim(im2)
 
 
 # Preprocess the laptop
-preproc <- preproc.image(im2, mean.img)
-plot(im2); plot(as.cimg(preproc[,,,1]))
+preproc <- preproc.image(im2)
+plot(im2); plot(as.cimg(preproc[,,,]))
 
 # Prediction again...
-prob <- predict(model, X=preproc)
+prob <- predict(model, preproc)
 printClassRank(prob, synsets)
 # Notebook, laptop, monitor. Very good!
-
-
-
 
 ###### Picture proportion is important: Is the network aware of dinosaurs?######
 # Load new image
 im3 <- load.image("images/dinosaur.jpg")
 plot(im3)
 
-preproc <- preproc.image(im3, mean.img)
-plot(as.cimg(preproc[,,,1]))
+preproc <- preproc.image(im3)
+plot(as.cimg(preproc[,,,]))
 # The head gets cut, does it matter?
-prob <- predict(model, X=preproc)
+prob <- predict(model, preproc)
 
 # Which class is the most representative
 printClassRank(prob, synsets)
@@ -165,9 +168,9 @@ printClassRank(prob, synsets)
 
 # What happens if we resize without cropping the image so that the head is 
 #  preserved?
-preproc <- preproc.image(im3, mean.img, crop=FALSE)
-plot(as.cimg(preproc[,,,1]))
-prob <- predict(model, X=preproc)
+preproc <- preproc.image(im3, crop=FALSE)
+plot(as.cimg(preproc[,,,]))
+prob <- predict(model, preproc)
 
 # Which class is the most representative
 printClassRank(prob, synsets)
@@ -177,25 +180,22 @@ printClassRank(prob, synsets)
 im3.2 <- load.image("images/dinosaurSquare.jpg")
 plot(im3.2)
 
-preproc <- preproc.image(im3.2, mean.img)
-plot(as.cimg(preproc[,,,1]))
-prob <- predict(model, X=preproc)
+preproc <- preproc.image(im3.2)
+plot(as.cimg(preproc[1,,,]))
+prob <- predict(model, preproc)
 
 # Which class is the most representative
 printClassRank(prob, synsets)
 # African Chamaleon still is the most representative 
-
-
-
 
 ################# Can the network identify Agbar Tower? ########################
 # Load new image
 im4 <- load.image("images/agbar.jpg")
 plot(im4)
 
-preproc <- preproc.image(im4, mean.img)
-plot(as.cimg(preproc[,,,1]))
-prob <- predict(model, X=preproc)
+preproc <- preproc.image(im4)
+plot(as.cimg(preproc[1,,,]))
+prob <- predict(model, preproc)
 
 # Which class is the most representative
 printClassRank(prob, synsets)
@@ -207,9 +207,9 @@ im5 <- load.image("images/Agbar2.png")
 plot(im5)
 
 # Normalize the laptop
-preproc <- preproc.image(im5, mean.img)
-plot(as.cimg(preproc[,,,1]))
-prob <- predict(model, X=preproc)
+preproc <- preproc.image(im5)
+plot(as.cimg(preproc[1,,,]))
+prob <- predict(model, preproc)
 
 printClassRank(prob, synsets)
 # Waterbottle. Closer.
@@ -225,10 +225,12 @@ plot(im6)
 # Remove Alpha Channel
 im6 <- rm.alpha(im6)
 
-preproc <- preproc.image(im6, mean.img)
-plot(as.cimg(preproc[,,,1]))
-prob <- predict(model, X=preproc)
+preproc <- preproc.image(im6)
+plot(as.cimg(preproc[,,,]))
+prob <- predict(model, preproc)
 
 printClassRank(prob, synsets)
 # Modem, Tape player... An hypothesis on this is that it  is recognizing the 
 #  aesthetics of that time.
+
+
