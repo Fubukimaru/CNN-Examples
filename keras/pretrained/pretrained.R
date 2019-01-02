@@ -1,6 +1,7 @@
 #' ---
 #' jupyter:
 #'   jupytext:
+#'     formats: ipynb,Rmd,R:spin
 #'     text_representation:
 #'       extension: .R
 #'       format_name: spin
@@ -48,7 +49,7 @@ library(imager)
 #' Based on Inceptionv3 network: rethinking the inception architecture for computer vision (Szegedy et al., 2015) https://arxiv.org/abs/1512.00567
 
 model <- application_inception_v3(include_top = TRUE, weights = "imagenet",
-  input_tensor = NULL, input_shape = NULL, pooling = NULL,
+  input_tensor = NULL, input_shape = c(299,299,3), pooling = NULL,
   classes = 1000)
 
 #' Now we check the model:
@@ -76,14 +77,14 @@ preproc.image <- function(im, crop = TRUE, dims=3) {
     yy <- floor((shape[2] - short.edge) / 2)
     im <- crop.borders(im, xx, yy) # Cropped image
   } 
-  # Resize to 224 x 224, needed by input of the model.
-  resized <- resize(im, 224, 224)
+  # Resize to 299 x 299, needed by input of the model.
+  resized <- resize(im, 299, 299)
   # Convert to array (x, y, channel)
-  arr <- as.array(resized) * 255 # From 0..1 to 0..255 (RGB integer codification)
-  dim(arr) <- c(224, 224, 3)
+  arr <- (as.array(resized) - 0.5)*2 # Pixels between -1 and 1 (This is the normalization used in training)
+  dim(arr) <- c(299, 299, 3)
 
   # Reshape to format needed by the network (num, width, height, channel)
-  dim(arr) <- c(1,224, 224, 3)
+  dim(arr) <- c(1,299, 299, 3)
   return(arr)
 }
 
@@ -102,81 +103,88 @@ printClassRank <- function(prob, labels, nRes = 10) {
 oldpar <- par() # We can save the old configuration using empty par()
 par(mfrow=c(1,2))
 
-######## Starters: Take an image from imageR package - Give me macaws! #########
+#' ## Starters: Take an image from imageR package - Give me macaws!
+
 im <- load.image(system.file("extdata/parrots.png", package="imager"))
 plot(im)
 
 dim(im)
-# 768x512 resolution with 3 channels (RGB), but this network was trained with
-#  images of size 224x224, we need to resize them.
 
-# Preprocess the parrots
+#' 768x512 resolution with 3 channels (RGB), but this network was trained with images of size 224x224, we need to resize them.
+
 preproc <- preproc.image(im)
-plot(as.cimg(preproc[,,,1]))
+plot(as.cimg(preproc[,,,]))
 dim(preproc)
-# We can observe that the image has been reduced, now has height = width and
-#  the color is a little off because of the subtraction of the mean image.
 
-# Predict the parrots! In other words, get the class probabilities
+#' We can observe that the image has been reduced, now has height = width and the image is cropped. Values are now between -1 and 1.
+
+str(preproc)
+
+#' Predict the parrots! In other words, get the class probabilities
+
 prob <- predict(model, preproc)
 dim(prob)
 
-# Which classes ar the most representative
-printClassRank(prob, synsets)
-# It's a Macaw!
+#' We get 1000 probabilities,  one for each class. Now we check which are the most representative.
 
-##### Now with something completely different: A laptop with Alpha Channel #####
-# Load new image
+printClassRank(prob, synsets)
+
+#' It's actually not a parrot but a Macaw and it gets correctly predicted!
+
+#' ## Now with something completely different: A laptop with Alpha Channel
+
 im2 <- load.image("images/laptop.png")
 plot(im2)
 dim(im2)
 
-# 572x430 with 4 channels... something is wrong.
-# PNG format allows the image to have transparency using the well-known alpha
-#  channel. This channel marks how much transparency we need to use for each 
-#  pixel. We can remove it using rm.alpha function.
+#'  572x430 with 4 channels... something is wrong.
+#'  PNG format allows the image to have transparency using the well-known alpha
+#'   channel. This channel marks how much transparency we need to use for each 
+#'   pixel. We can remove it using rm.alpha function.
 
-# Remove Alpha Channel
 im2 <- rm.alpha(im2)
 plot(im2)
 dim(im2)
-# Now we have 3 channels, we can proceed as before.
 
 
-# Preprocess the laptop
+#' Now we have 3 channels, we can proceed as before.
+
 preproc <- preproc.image(im2)
-plot(im2); plot(as.cimg(preproc[,,,]))
+plot(as.cimg(preproc[,,,]))
 
-# Prediction again...
 prob <- predict(model, preproc)
 printClassRank(prob, synsets)
-# Notebook, laptop, monitor. Very good!
 
-###### Picture proportion is important: Is the network aware of dinosaurs?######
-# Load new image
+#' Monitor, screen, desktop computer, laptop. Not bad.
+
+#' ## Picture proportion is important: Is the network aware of dinosaurs?
+
 im3 <- load.image("images/dinosaur.jpg")
 plot(im3)
 
 preproc <- preproc.image(im3)
 plot(as.cimg(preproc[,,,]))
-# The head gets cut, does it matter?
 prob <- predict(model, preproc)
 
-# Which class is the most representative
-printClassRank(prob, synsets)
-# African Chamaleon. Almost!
+#' The head gets cut, does it matter?
 
-# What happens if we resize without cropping the image so that the head is 
-#  preserved?
+printClassRank(prob, synsets)
+
+#' African Chamaleon. Almost!
+
+#'  What happens if we resize without cropping the image so that the head is 
+#'   preserved?
+
 preproc <- preproc.image(im3, crop=FALSE)
 plot(as.cimg(preproc[,,,]))
 prob <- predict(model, preproc)
 
 # Which class is the most representative
 printClassRank(prob, synsets)
-# Ibex. The proportions of the image look like important.
+# Frilled lizard. The prediction changed, so the proportions of the image are important.
 
-# What if we center it manually?
+#' What if we center it manually?
+
 im3.2 <- load.image("images/dinosaurSquare.jpg")
 plot(im3.2)
 
@@ -184,12 +192,12 @@ preproc <- preproc.image(im3.2)
 plot(as.cimg(preproc[1,,,]))
 prob <- predict(model, preproc)
 
-# Which class is the most representative
 printClassRank(prob, synsets)
-# African Chamaleon still is the most representative 
 
-################# Can the network identify Agbar Tower? ########################
-# Load new image
+#' African Chamaleon still is the most representative 
+
+#' ## Can the network identify Agbar Tower?
+
 im4 <- load.image("images/agbar.jpg")
 plot(im4)
 
@@ -197,26 +205,34 @@ preproc <- preproc.image(im4)
 plot(as.cimg(preproc[1,,,]))
 prob <- predict(model, preproc)
 
-# Which class is the most representative
 printClassRank(prob, synsets)
-# Mitten... Almost. The network is not quite sure about what Agbar tower is.
-# We should ignore classification, as the higher probability is very small.
 
-# Let's try with another photo
+#' Spindle, sock... Almost. The network is not quite sure about what Agbar tower is.
+#' We should ignore the classification, as the higher probability is very small. Maybe the colors are fooling the network, let's try without color.
+
+preproc <- preproc.image(im4)
+preproc <- preproc[1,,,c(2,2,2), drop=F] # Grayscale (setting all the channels to the same value)
+plot(as.cimg(preproc[1,,,]))
+prob <- predict(model, preproc[1,,,c(1,1,1), drop=F])
+printClassRank(prob, synsets)
+
+#' It's not the color, it gets classified as a saxophone.
+
+#' ## Agbar 2: Let's try with another photo
+
 im5 <- load.image("images/Agbar2.png")
 plot(im5)
 
-# Normalize the laptop
 preproc <- preproc.image(im5)
 plot(as.cimg(preproc[1,,,]))
 prob <- predict(model, preproc)
 
 printClassRank(prob, synsets)
-# Waterbottle. Closer.
 
+#' The network is still not clear about what is that photo. Probably the bigest lampshade on planet Earth.
 
+#' ## Identifying by aesthetics: You may know what is this one
 
-########## Identifying by aesthetics; You may know what is this one ############
 im6 <- load.image("images/NES.png")
 dim(im6)
 # Notice that this image has 4 channels!
@@ -230,7 +246,6 @@ plot(as.cimg(preproc[,,,]))
 prob <- predict(model, preproc)
 
 printClassRank(prob, synsets)
-# Modem, Tape player... An hypothesis on this is that it  is recognizing the 
-#  aesthetics of that time.
 
-
+#'  Modem, cassette player, CRT screen... An hypothesis on this is that it is recognizing the 
+#'   aesthetics of that time this console was built.
