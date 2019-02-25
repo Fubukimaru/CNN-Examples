@@ -6,18 +6,11 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.0'
-      jupytext_version: 0.8.5
+      jupytext_version: 0.8.6
   kernelspec:
     display_name: R
     language: R
     name: ir
-  language_info:
-    codemirror_mode: r
-    file_extension: .r
-    mimetype: text/x-r-source
-    name: R
-    pygments_lexer: r
-    version: 3.5.1
 ---
 
 ```{r}

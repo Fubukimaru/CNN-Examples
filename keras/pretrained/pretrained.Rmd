@@ -1,23 +1,16 @@
 ---
 jupyter:
   jupytext:
-    formats: ipynb,Rmd,R:spin
+    formats: ipynb,Rmd:rmarkdown,R:spin
     text_representation:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.0'
-      jupytext_version: 0.8.5
+      jupytext_version: 0.8.6
   kernelspec:
     display_name: R
     language: R
     name: ir
-  language_info:
-    codemirror_mode: r
-    file_extension: .r
-    mimetype: text/x-r-source
-    name: R
-    pygments_lexer: r
-    version: 3.5.1
 ---
 
 # Installation details
@@ -132,7 +125,7 @@ plot(im)
 dim(im)
 ```
 
-768x512 resolution with 3 channels (RGB), but this network was trained with images of size 224x224, we need to resize them.
+768x512 resolution with 3 channels (RGB), but this network was trained with images of size 299x299, we need to resize them.
 
 ```{r}
 preproc <- preproc.image(im)
