@@ -6,11 +6,18 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.0'
-      jupytext_version: 0.8.6
+      jupytext_version: 0.8.5
   kernelspec:
     display_name: R
     language: R
     name: ir
+  language_info:
+    codemirror_mode: r
+    file_extension: .r
+    mimetype: text/x-r-source
+    name: R
+    pygments_lexer: r
+    version: 3.5.1
 ---
 
 ```{r}
@@ -270,6 +277,7 @@ lenet %>% fit(
           train$x, 
           train$yOneHot, 
           batch_size=50,
+          validation_split=0.2,
           epochs=10
 )
 ```
@@ -285,6 +293,14 @@ lenet %>% save_model_hdf5("lenet-FashionMNIST.h5")
 ## Predicting using the model
 
 Predicting the label for the test set
+
+```{r}
+lenet <- load_model_hdf5("lenet-FashionMNIST.h5")
+```
+
+```{r}
+lenet
+```
 
 ```{r}
 pred_prob <- predict(lenet, test$x)
