@@ -1,31 +1,10 @@
----
-jupyter:
-  jupytext:
-    formats: ipynb,Rmd:rmarkdown
-    text_representation:
-      extension: .Rmd
-      format_name: rmarkdown
-      format_version: '1.0'
-      jupytext_version: 0.8.5
-  kernelspec:
-    display_name: R
-    language: R
-    name: ir
-  language_info:
-    codemirror_mode: r
-    file_extension: .r
-    mimetype: text/x-r-source
-    name: R
-    pygments_lexer: r
-    version: 3.5.1
----
-
 ```{r}
 library(keras)  # FashionMNIST dataset
 library(nnet)  # Neural networks
 library(caret)  # Cross Validation - loads nnet directly on trainControl
 
-library(doMC)   # Parallel cross-validation
+library(doMC)   # Parallel cross-validation. 
+                # Comment this if you use windows, as doMC is not available!
 ```
 
 # Dataset
@@ -146,6 +125,7 @@ Now we prepare join the X and the Y in a data.frame.
 
 ```{r}
 nnetData <- data.frame(train$x, class=train$yFactor)
+nnetDataTest <- data.frame(test$x, class=test$yFactor)
 ```
 
 # Training a Neural Network
@@ -204,6 +184,15 @@ model.5CV
 The best model we got has an accuracy of 84%. Not bad at all for a 10 class
 classification problem.
 
+```{r}
+pred <- predict(model.5CV,nnetDataTest)
+(t <- table(nnetDataTest$class, pred))
+```
+
+```{r}
+(accuracy <- sum(diag(t))/sum(t))
+```
+Test also gives us 84% of accuracy. Nice model :)
 
 # Convolutional Neural Networks
 
