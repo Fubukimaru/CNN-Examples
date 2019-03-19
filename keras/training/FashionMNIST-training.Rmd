@@ -6,18 +6,11 @@ jupyter:
       extension: .Rmd
       format_name: rmarkdown
       format_version: '1.0'
-      jupytext_version: 0.8.5
+      jupytext_version: 0.8.6
   kernelspec:
     display_name: R
     language: R
     name: ir
-  language_info:
-    codemirror_mode: r
-    file_extension: .r
-    mimetype: text/x-r-source
-    name: R
-    pygments_lexer: r
-    version: 3.5.1
 ---
 
 ```{r}
@@ -25,8 +18,7 @@ library(keras)  # FashionMNIST dataset
 library(nnet)  # Neural networks
 library(caret)  # Cross Validation - loads nnet directly on trainControl
 
-library(doMC)   # Parallel cross-validation. 
-                # Comment this if you use windows, as doMC is not available!
+library(doParallel) # Parallel cross-validation. 
 ```
 
 # Dataset
@@ -174,7 +166,7 @@ We now specify that we want to execute the cross validation in parallel:
 ```{r}
 # Use all cores except one (recommended if you want to use your computer for something else). Or half of the lenght of the decays (RAM issues).
 cores <- min(detectCores()-1, ceiling(length(decays)/2))
-registerDoMC(cores = cores) 
+registerDoParallel(cores = cores) 
 ```
 Beware with the number of cores used, it will impact in the RAM usage. ~10GB per thread with 60K Fashion MNIST samples. **Don't execute this training if you don't have a big machine, just load the model.**
 
