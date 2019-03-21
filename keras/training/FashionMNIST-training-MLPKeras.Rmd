@@ -15,10 +15,8 @@ jupyter:
 
 ```{r}
 library(keras)  # FashionMNIST dataset
-library(nnet)  # Neural networks
-library(caret)  # Cross Validation - loads nnet directly on trainControl
 
-library(doParallel) # Parallel cross-validation. 
+library(nnet)   # For class.ind
 ```
 
 # Dataset
@@ -99,9 +97,13 @@ train$yOneHot[1:10,]
 *class.ind* reorders the classes alfabetically, therefore we need to revert this order to the original provided. We use *match* over the column names to get a vector of the reorder to match the column names to **classString**.
 
 ```{r}
-colnames(train$yOneHot)
 classString
-(m <- match(classString, colnames(test$yOneHot))) 
+```
+
+```{r}
+# colnames(train$yOneHot)
+# classString
+m <- match(classString, colnames(test$yOneHot))
 ```
 
 ```{r}
@@ -132,122 +134,20 @@ dim(train$x) <- c(dim(train$x),1)
 dim(test$x) <- c(dim(test$x),1)
 ```
 
-## Create a dataset for nnet
-
-
-Now we prepare join the X and the Y in a data.frame.
+# MLP With Keras
 
 ```{r}
-nnetData <- data.frame(train$x, class=train$yFactor)
-nnetDataTest <- data.frame(test$x, class=test$yFactor)
-```
-
-# Training a Neural Network
-
-
-We can train the model directly as follows, but we will use _caret's_
-_trainControl_ for CrossValidation.
-
-```{r}
-model.nnet <- nnet(class ~ ., data=nnetData, size=50, maxit=300,decay=0.5, MaxNWts = 39760)
-```
-
-Specifically a 5 fold cross-validation. We don't go for a 10 fold
-cross-validation as it will take a lot of time to compute.
-
-```{r}
-## specify 5-CV
-K <- 5
-trc <- trainControl (method="repeatedcv", number=K, repeats=1)
-(decays <- 10^seq(-3,0,by=0.25))
-```
-We now specify that we want to execute the cross validation in parallel:
-
-```{r}
-# Use all cores except one (recommended if you want to use your computer for something else). Or half of the lenght of the decays (RAM issues).
-cores <- min(detectCores()-1, ceiling(length(decays)/2))
-registerDoParallel(cores = cores) 
-```
-Beware with the number of cores used, it will impact in the RAM usage. ~10GB per thread with 60K Fashion MNIST samples. **Don't execute this training if you don't have a big machine, just load the model.**
-
-The cross-validation process will take about 30 hours using 7 cores of a Intel(R) 
-Xeon(R) CPU E5-2630 v4 @ 2.20GHz and about 80 GB of RAM.
-
-Remember that we're training (number_of_decay_param x number_of_folds) = 14 x 5
-= 70 models.
-
-```{r}
-## WARNING: this takes some time
-model.5CV <- train (class ~ ., data=nnetData, method='nnet', maxit = 300, trace = FALSE,
-                      tuneGrid = expand.grid(.size=50,.decay=decays), trControl=trc, MaxNWts=39760)
-```
-
-```{r}
-# Save model
-save(model.5CV, file="nnet.mod")
-```
-
-```{r}
-load("nnet.mod")
-```
-
-```{r}
-model.5CV
-```
-
-The best model we got has an accuracy of 84%. Not bad at all for a 10 class
-classification problem.
-
-```{r}
-pred <- predict(model.5CV,nnetDataTest)
-(t <- table(nnetDataTest$class, pred))
-```
-
-```{r}
-(accuracy <- sum(diag(t))/sum(t))
-```
-Test also gives us 84% of accuracy. Nice model :)
-
-# Convolutional Neural Networks
-
-## Model architecture definition: LeNet
-
-Now we have to define the CNN architecture. In this case we use LeNet, proposed
-by LeCun et al. (Gradient-based learning applied to document recognition. 
-Proceedings of the IEEE, november 1998). 
-
-It is composed by two packs of convolutional-activation(tanh)-pooling layers and
-two fully connected layers with a softmax layer at the end.
-
-In Keras, as in most of the packages, we define layers as objects and the 
-connections between those objects. In this case we implicitly connect everything
-using the %>% operator.
-
-```{r}
-lenet <- keras_model_sequential() %>%
-    # First convolutional block
-    layer_conv_2d(filters=20, kernel_size=c(5,5), activation="tanh",
-        input_shape=c(28,28,1), padding="same") %>%  # We define here the input size
-    layer_max_pooling_2d(pool_size=c(2,2),strides=c(2,2)) %>%
-    # Second convolutional block
-    layer_conv_2d(filters=50, kernel_size=c(5,5), activation="tanh",
-        input_shape=c(28,28,1), padding="same") %>% 
-    layer_max_pooling_2d(pool_size=c(2,2),strides=c(2,2)) %>%
-    
-    # Flatten the matrix to a vector for the fully connected layers
-    layer_flatten() %>%
-
-    # First fully connected block
+mlp <- keras_model_sequential() %>%
+    layer_flatten() %>% # Images to vector format
+    # First fully connected block (Hidden layer)
     layer_dense(units=500, activation="tanh") %>%
-    # Second fully connected block
-    layer_dense(units=10, activation="softmax") 
-    # This last layer will produce the final classification (probability of 
-    # belonging to a class). 10 different units, 10 different classes.
+    # Second fully connected block (output layer)
+    layer_dense(units=10, activation="softmax")
 ```
 
 Now we check the architecture we have defined:
 ```{r}
-lenet
+mlp
 ```
 
 Notice that we're adjusting 1 million parameters this time. With the nnet one layer network we were training just 39.760 parameters.
@@ -262,7 +162,7 @@ sgd <- optimizer_sgd(
                      momentum=0.8, 
                      clipnorm=1.
 )
-lenet %>% compile(optimizer=sgd,
+mlp %>% compile(optimizer=sgd,
               loss='categorical_crossentropy', 
               metrics = "accuracy"
 )
@@ -276,7 +176,7 @@ version of the package and the required Nvidia packages (check PlaidML for
 non-Nvidia GPUs). 
 
 ```{r}
-lenet %>% fit(
+mlp %>% fit(
           train$x, 
           train$yOneHot, 
           batch_size=50,
@@ -285,12 +185,9 @@ lenet %>% fit(
 )
 ```
 
-Takes about 3 minuts with 40 cores and 18 GB of RAM. It may take less with GPUs!
-
-
 And now we save the trained model for convenience:
 ```{r}
-lenet %>% save_model_hdf5("lenet-FashionMNIST.h5")
+mlp %>% save_model_hdf5("mlp-FashionMNIST.h5")
 ```
 
 ## Predicting using the model
@@ -298,15 +195,15 @@ lenet %>% save_model_hdf5("lenet-FashionMNIST.h5")
 Predicting the label for the test set
 
 ```{r}
-lenet <- load_model_hdf5("lenet-FashionMNIST.h5")
+mlp <- load_model_hdf5("mlp-FashionMNIST.h5")
 ```
 
 ```{r}
-lenet
+mlp
 ```
 
 ```{r}
-pred_prob <- predict(lenet, test$x)
+pred_prob <- predict(mlp, test$x)
 ```
 
 ```{r}
@@ -323,13 +220,13 @@ predClass <- classString[predClass] # And change the integers by their class tag
 trueClass <- test$yFactor
 
 # Now we do a confusion matrix and analyze it
-(cMatrix <- table(trueClass,predClass))
+cMatrix <- table(trueClass,predClass)
 ```
 
 ```{r}
 correctClass <- sum(diag(cMatrix))
 total <- sum(cMatrix)
-(accuracy <- correctClass/total)
+accuracy <- correctClass/total
 ```
 
-We're getting about a 90% of accuracy that may be improved with further tunning of the network. Notice that, for example, there are 30 ankle boots classified as sneakers, that can have similar shapes. Also there are 113 pullovers are classified as coats.
+As it is we will get around 80% of accuracy
